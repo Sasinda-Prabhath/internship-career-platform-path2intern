@@ -40,7 +40,7 @@ const JobRow = ({ job }) => {
                     {job.workMode}
                 </span>
                 {canEdit && (
-                    <Link to="/org/post-job" className="text-xs text-blue-600 hover:underline font-medium">Edit</Link>
+                    <Link to={`/org/edit-job/${job._id}`} className="text-xs text-blue-600 hover:underline font-medium">Edit</Link>
                 )}
             </div>
         </div>
@@ -204,7 +204,7 @@ export default function OrgDashboard() {
                     <div className="bg-white border border-gray-200 rounded-2xl p-5">
                         <div className="flex items-center justify-between mb-4">
                             <h3 className="text-sm font-semibold text-gray-900">Your Listings</h3>
-                            <Link to="/org/post-job" className="text-xs text-blue-600 hover:underline font-medium">View all</Link>
+                            <Link to="/org/job-listings" className="text-xs text-blue-600 hover:underline font-medium">View all</Link>
                         </div>
 
                         {loading && (

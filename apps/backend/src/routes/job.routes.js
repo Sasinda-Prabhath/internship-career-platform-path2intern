@@ -7,7 +7,6 @@ const router = Router();
 
 // Public — anyone can browse jobs
 router.get("/", getJobs);
-router.get("/:id", getJob);
 
 // Auth required for all routes below
 router.use(requireAuth);
@@ -24,5 +23,8 @@ router.delete("/:id", requireRole("ORGANIZATION"), deleteJob);
 // Org — applicant management
 router.get("/:id/applicants", requireRole("ORGANIZATION"), getJobApplicants);
 router.patch("/:id/applicants/:appId", requireRole("ORGANIZATION"), updateApplicantStatus);
+
+// Public job detail (must be last to not conflict with other routes)
+router.get("/:id", getJob);
 
 export default router;

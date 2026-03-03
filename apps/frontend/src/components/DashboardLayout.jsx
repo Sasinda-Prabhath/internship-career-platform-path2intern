@@ -36,6 +36,7 @@ const NAV = {
         dot: "bg-green-500",
         items: [
             { label: "Overview", to: "/dashboard/recruiter", icon: "grid" },
+            { label: "Job Listings", to: "/org/job-listings", icon: "list" },
             { label: "Post a Job", to: "/org/post-job", icon: "plus" },
         ],
     },
@@ -47,6 +48,7 @@ const NAV = {
         dot: "bg-green-500",
         items: [
             { label: "Overview", to: "/dashboard/recruiter", icon: "grid" },
+            { label: "Job Listings", to: "/org/job-listings", icon: "list" },
             { label: "Post a Job", to: "/org/post-job", icon: "plus" },
         ],
     },
