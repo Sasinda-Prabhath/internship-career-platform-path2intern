@@ -9,6 +9,7 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Profile from "./pages/Profile";
 import AcceptInvitePage from "./pages/AcceptInvitePage";
+import JobDetailPage from "./pages/JobDetailPage";
 
 // Role dashboards
 import SystemAdminDashboard from "./pages/dashboards/SystemAdminDashboard";
@@ -34,6 +35,7 @@ import ContactsPage from "./pages/admin/ContactsPage";
 
 // Organisation pages
 import PostJobPage from "./pages/org/PostJobPage";
+import ManageApplicantsPage from "./pages/org/ManageApplicantsPage";
 
 /** Wraps a page with auth guard + left sidebar */
 function DashboardRoute({ allowedRoles, children }) {
@@ -56,9 +58,13 @@ function App() {
           <Route path="/" element={<Home />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
+          <Route path="/job/:jobId" element={<JobDetailPage />} />
 
           {/* Staff invite acceptance — public, no sidebar */}
           <Route path="/accept-invite" element={<AcceptInvitePage />} />
+
+          {/* Job detail — public */}
+          <Route path="/job/:jobId" element={<JobDetailPage />} />
 
           {/* Profile — auth only, no sidebar */}
           <Route
@@ -96,6 +102,7 @@ function App() {
           <Route path="/module/question-bank" element={<DashboardRoute allowedRoles={["MODULE_MANAGER", "MODULE_OPERATOR"]}><QuestionBankPage /></DashboardRoute>} />
           <Route path="/quiz" element={<DashboardRoute allowedRoles={["STUDENT"]}><QuizPage /></DashboardRoute>} />
           <Route path="/org/post-job" element={<DashboardRoute allowedRoles={["ORGANIZATION", "RECRUITER"]}><PostJobPage /></DashboardRoute>} />
+          <Route path="/org/applicants/:jobId" element={<DashboardRoute allowedRoles={["ORGANIZATION", "RECRUITER"]}><ManageApplicantsPage /></DashboardRoute>} />
           <Route path="/admin/org-approvals" element={<DashboardRoute allowedRoles={["UNIVERSITY_ADMIN", "SYSTEM_ADMIN"]}><OrgApprovalsPage /></DashboardRoute>} />
           <Route path="/admin/contacts" element={<DashboardRoute allowedRoles={["SYSTEM_ADMIN"]}><ContactsPage /></DashboardRoute>} />
         </Routes>

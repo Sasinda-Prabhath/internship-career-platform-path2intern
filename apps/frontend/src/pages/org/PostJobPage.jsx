@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback } from "react";
+import { Link } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 import { api } from "../../services/api";
 
-const EDIT_WINDOW_MS = 10 * 60 * 1000;
+const EDIT_WINDOW_MS = 2 * 60 * 1000; // 2 minutes
 
 const JOB_TYPES = ["Internship", "Part-time", "Full-time"];
 const WORK_MODES = ["Remote", "Hybrid", "On-site"];
@@ -44,13 +45,13 @@ function TimeRemaining({ editExpiresAt }) {
     return <span className="text-xs bg-amber-100 text-amber-700 border border-amber-200 px-2 py-0.5 rounded-full font-medium">⏱ Edit: {remaining}</span>;
 }
 
-const emptyForm = {
-    title: "", description: "", company: "",
+const buildEmptyForm = (orgName = "") => ({
+    title: "", description: "", company: orgName,
     province: "", district: "",
     workMode: "Hybrid", type: "Internship", duration: "",
     salaryMin: "", salaryMax: "", salaryCurrency: "LKR", salaryPeriod: "month",
     skills: "", requirements: "", deadline: "",
-};
+});
 
 const WORK_MODE_COLOR = {
     Remote: "bg-green-50 text-green-700 border-green-200",
@@ -68,7 +69,7 @@ export default function PostJobPage() {
     const [jobs, setJobs] = useState([]);
     const [loading, setLoading] = useState(false);
     const [formLoading, setFormLoading] = useState(false);
-    const [form, setForm] = useState(emptyForm);
+    const [form, setForm] = useState(buildEmptyForm());
     const [editingId, setEditingId] = useState(null);
     const [error, setError] = useState("");
     const [success, setSuccess] = useState("");
@@ -106,9 +107,9 @@ export default function PostJobPage() {
                 setSuccess("Job updated successfully.");
             } else {
                 await api.post("/api/jobs", payload);
-                setSuccess("Job posted! It will appear on the home page. You can edit within 10 minutes.");
+                setSuccess("Job posted! It's now live on the platform. You can edit it within 2 minutes.");
             }
-            setForm(emptyForm); setEditingId(null); setShowForm(false); fetchJobs();
+            setForm(buildEmptyForm(user?.organizationName)); setEditingId(null); setShowForm(false); fetchJobs();
         } catch (e) { setError(e.response?.data?.message || "Failed to save job"); }
         finally { setFormLoading(false); }
     };
@@ -129,7 +130,7 @@ export default function PostJobPage() {
         window.scrollTo({ top: 0, behavior: "smooth" });
     };
 
-    const cancelForm = () => { setForm(emptyForm); setEditingId(null); setShowForm(false); setError(""); };
+    const cancelForm = () => { setForm(buildEmptyForm(user?.organizationName)); setEditingId(null); setShowForm(false); setError(""); };
 
     const handleDelete = async () => {
         setDeleting(true);
@@ -148,10 +149,10 @@ export default function PostJobPage() {
                     <div>
                         <span className="bg-green-100 text-green-700 text-xs font-semibold px-2.5 py-1 rounded-full border border-green-200 uppercase tracking-wider">Organisation</span>
                         <h1 className="text-3xl font-bold text-gray-900 mt-2">Job Postings</h1>
-                        <p className="text-gray-500 mt-1 text-sm">Post internships to reach SLIIT students. Edit within 10 minutes of posting.</p>
+                        <p className="text-gray-500 mt-1 text-sm">Post internships to reach SLIIT students. Edit within 2 minutes of posting.</p>
                     </div>
                     {!showForm && (
-                        <button onClick={() => { setShowForm(true); setForm(emptyForm); setEditingId(null); }}
+                        <button onClick={() => { setShowForm(true); setForm(buildEmptyForm(user?.organizationName)); setEditingId(null); }}
                             className="flex-shrink-0 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold px-5 py-2.5 rounded-xl transition-colors shadow-sm mt-1">
                             + Post a Job
                         </button>
@@ -320,7 +321,13 @@ export default function PostJobPage() {
                                             </div>
                                         )}
                                     </div>
-                                    <div className="flex gap-2 flex-shrink-0">
+                                    <div className="flex gap-2 flex-shrink-0 flex-wrap">
+                                        <Link
+                                            to={`/org/applicants/${job._id}`}
+                                            className="px-3 py-1.5 text-xs font-medium bg-purple-50 text-purple-700 border border-purple-200 rounded-xl hover:bg-purple-100 transition-colors"
+                                        >
+                                            👥 Applicants
+                                        </Link>
                                         {job.canEdit ? (
                                             <button onClick={() => startEdit(job)} className="px-3 py-1.5 text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200 rounded-xl hover:bg-blue-100 transition-colors">Edit</button>
                                         ) : (

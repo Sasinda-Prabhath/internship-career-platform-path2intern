@@ -53,7 +53,7 @@ function JobCard({ job }) {
       )}
       {job.salaryDisplay && <p className="text-xs text-emerald-700 font-semibold">💰 {job.salaryDisplay}</p>}
       {job.deadline && <p className="text-xs text-gray-400">Deadline: {new Date(job.deadline).toLocaleDateString()}</p>}
-      <button className="mt-auto w-full text-center text-sm font-medium text-blue-600 border border-blue-200 rounded-xl py-2 hover:bg-blue-600 hover:text-white hover:border-blue-600 transition-colors bg-blue-50">View & Apply</button>
+      <Link to={`/job/${job._id}`} className="mt-auto w-full text-center text-sm font-medium text-blue-600 border border-blue-200 rounded-xl py-2 hover:bg-blue-600 hover:text-white hover:border-blue-600 transition-colors bg-blue-50">View & Apply</Link>
     </div>
   );
 }

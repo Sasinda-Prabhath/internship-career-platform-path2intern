@@ -20,7 +20,7 @@ const StatCard = ({ label, value, icon, accent, sub }) => (
 /* ── Job row in recent listings ────────────────────────────────────────── */
 const JobRow = ({ job }) => {
     const age = Date.now() - new Date(job.createdAt).getTime();
-    const canEdit = age < 10 * 60 * 1000;
+    const canEdit = age < 2 * 60 * 1000;
     const WORK_COLORS = {
         Remote: "bg-green-100 text-green-700",
         Hybrid: "bg-blue-100 text-blue-700",
@@ -167,16 +167,15 @@ export default function OrgDashboard() {
                                     to="/org/post-job"
                                     icon="📋"
                                     title="Manage Listings"
-                                    description="View, edit (within 10 min), or delete your job posts."
+                                    description="View, edit (within 2 min), or delete your job posts."
                                     accent="blue"
                                 />
                                 <OrgActionCard
-                                    to="#"
+                                    to="/org/post-job"
                                     icon="👥"
                                     title="Review Applications"
-                                    description="See all student applications for your listings."
+                                    description="Click a job listing then 'Applicants' to review submissions."
                                     accent="amber"
-                                    disabled
                                 />
                                 <OrgActionCard
                                     to="#"
@@ -196,7 +195,7 @@ export default function OrgDashboard() {
                                 <li>• Add detailed job descriptions to attract the right candidates</li>
                                 <li>• Include required skills so students can self-filter</li>
                                 <li>• Set a realistic salary range — it significantly increases applications</li>
-                                <li>• You can edit a post within 10 minutes of publishing</li>
+                                <li>• You can edit a post within <strong>2 minutes</strong> of publishing</li>
                             </ul>
                         </div>
                     </div>
