@@ -27,6 +27,7 @@ import QuestionBankPage from "./pages/module/QuestionBankPage";
 
 // Student pages
 import QuizPage from "./pages/quiz/QuizPage";
+import SimulationRunner from "./pages/SimulationRunner";
 
 // University Admin pages
 import StaffManagementPage from "./pages/staff/StaffManagementPage";
@@ -101,6 +102,7 @@ function App() {
           <Route path="/module/review" element={<DashboardRoute allowedRoles={["MODULE_MANAGER"]}><ReviewQueuePage /></DashboardRoute>} />
           <Route path="/module/question-bank" element={<DashboardRoute allowedRoles={["MODULE_MANAGER", "MODULE_OPERATOR"]}><QuestionBankPage /></DashboardRoute>} />
           <Route path="/quiz" element={<DashboardRoute allowedRoles={["STUDENT"]}><QuizPage /></DashboardRoute>} />
+          <Route path="/simulation" element={<DashboardRoute allowedRoles={["STUDENT"]}><SimulationRunner /></DashboardRoute>} />
           <Route path="/org/post-job" element={<DashboardRoute allowedRoles={["ORGANIZATION", "RECRUITER"]}><PostJobPage /></DashboardRoute>} />
           <Route path="/org/edit-job/:jobId" element={<DashboardRoute allowedRoles={["ORGANIZATION", "RECRUITER"]}><PostJobPage /></DashboardRoute>} />
           <Route path="/org/job-listings" element={<DashboardRoute allowedRoles={["ORGANIZATION", "RECRUITER"]}><JobListingsPage /></DashboardRoute>} />

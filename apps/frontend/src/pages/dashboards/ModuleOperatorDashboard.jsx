@@ -110,6 +110,16 @@ export default function ModuleOperatorDashboard() {
                             </p>
                         </div>
                     </div>
+                    <Link to="/simulation"
+                        className="bg-white border border-gray-200 rounded-2xl p-5 flex items-start gap-4 hover:border-indigo-500/30 hover:-translate-y-0.5 hover:shadow-lg transition-all">
+                        <div className="text-2xl mt-0.5">🎯</div>
+                        <div>
+                            <p className="text-sm font-semibold text-gray-900 mb-1">Interview Simulation</p>
+                            <p className="text-xs text-gray-500 leading-relaxed">
+                                Practice with AI-generated interview questions for your modules.
+                            </p>
+                        </div>
+                    </Link>
                 </div>
 
                 {/* Submissions table */}

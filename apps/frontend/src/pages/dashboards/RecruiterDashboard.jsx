@@ -188,6 +188,13 @@ export default function OrgDashboard() {
                                     accent="purple"
                                     disabled
                                 />
+                                <OrgActionCard
+                                    to="/simulation"
+                                    icon="🎯"
+                                    title="Interview Simulation"
+                                    description="Practice with AI-generated interview questions for your modules."
+                                    accent="blue"
+                                />
                             </div>
                         </div>
 
