@@ -45,8 +45,9 @@ export default function JobListingsPage() {
 
     const fetchJobs = useCallback(async () => {
         try {
-            const res = await api.get("/api/jobs/my-jobs");
-            setJobs(res.data);
+            const res = await api.get("/api/jobs/mine");
+            console.log(res.data);
+            setJobs(res.data.jobs);
         } catch (e) {
             setError(e.response?.data?.message || "Failed to load jobs");
         } finally {
