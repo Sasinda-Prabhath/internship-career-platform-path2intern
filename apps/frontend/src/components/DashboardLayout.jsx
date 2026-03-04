@@ -38,6 +38,7 @@ const NAV = {
             { label: "Overview", to: "/dashboard/recruiter", icon: "grid" },
             { label: "Job Listings", to: "/org/job-listings", icon: "list" },
             { label: "Post a Job", to: "/org/post-job", icon: "plus" },
+            { label: "Interview Simulation", to: "/simulation", icon: "target" },
         ],
     },
     // RECRUITER is the legacy name for ORGANIZATION — same nav config
@@ -50,6 +51,7 @@ const NAV = {
             { label: "Overview", to: "/dashboard/recruiter", icon: "grid" },
             { label: "Job Listings", to: "/org/job-listings", icon: "list" },
             { label: "Post a Job", to: "/org/post-job", icon: "plus" },
+            { label: "Interview Simulation", to: "/simulation", icon: "target" },
         ],
     },
     STUDENT: {
@@ -61,6 +63,7 @@ const NAV = {
             { label: "Overview", to: "/dashboard/student", icon: "grid" },
             { label: "Browse Internships", to: "/", icon: "search" },
             { label: "Take a Quiz", to: "/quiz", icon: "quiz" },
+            { label: "Interview Simulation", to: "/simulation", icon: "target" },
         ],
     },
     MODULE_MANAGER: {
@@ -74,6 +77,7 @@ const NAV = {
             { label: "Submit Question", to: "/module/submit-question", icon: "plus" },
             { label: "Question Bank", to: "/module/question-bank", icon: "book" },
             { label: "Manage Operators", to: "/module/assign-operator", icon: "users" },
+            { label: "Interview Simulation", to: "/simulation", icon: "target" },
         ],
     },
     MODULE_OPERATOR: {
@@ -85,6 +89,7 @@ const NAV = {
             { label: "Overview", to: "/dashboard/module-operator", icon: "grid" },
             { label: "Submit Question", to: "/module/submit-question", icon: "plus" },
             { label: "Question Bank", to: "/module/question-bank", icon: "book" },
+            { label: "Interview Simulation", to: "/simulation", icon: "target" },
         ],
     },
 };
@@ -109,6 +114,7 @@ function Icon({ name, className = "w-5 h-5" }) {
         star: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />,
         plus: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M12 4v16m8-8H4" />,
         logout: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />,
+        target: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" />,
     };
     return (
         <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
