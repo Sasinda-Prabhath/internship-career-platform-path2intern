@@ -32,13 +32,16 @@ const JobRow = ({ job }) => {
                 {job.company?.[0]?.toUpperCase() || "J"}
             </div>
             <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-gray-900 truncate">{job.title}</p>
+                <Link to={`/org/applicants/${job._id}`} className="hover:underline">
+                    <p className="text-sm font-medium text-gray-900 truncate">{job.title}</p>
+                </Link>
                 <p className="text-xs text-gray-400">{job.location} · {job.type}</p>
             </div>
             <div className="flex items-center gap-2 flex-shrink-0">
                 <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${WORK_COLORS[job.workMode] || "bg-gray-100 text-gray-600"}`}>
                     {job.workMode}
                 </span>
+                <Link to={`/org/applicants/${job._id}`} className="text-xs text-purple-600 hover:underline font-medium">Applicants</Link>
                 {canEdit && (
                     <Link to={`/org/edit-job/${job._id}`} className="text-xs text-blue-600 hover:underline font-medium">Edit</Link>
                 )}
@@ -164,14 +167,14 @@ export default function OrgDashboard() {
                                     accent="green"
                                 />
                                 <OrgActionCard
-                                    to="/org/post-job"
+                                    to="/org/job-listings"
                                     icon="📋"
                                     title="Manage Listings"
                                     description="View, edit (within 2 min), or delete your job posts."
                                     accent="blue"
                                 />
                                 <OrgActionCard
-                                    to="/org/post-job"
+                                    to="/org/job-listings"
                                     icon="👥"
                                     title="Review Applications"
                                     description="Click a job listing then 'Applicants' to review submissions."
@@ -188,16 +191,6 @@ export default function OrgDashboard() {
                             </div>
                         </div>
 
-                        {/* Tips card */}
-                        <div className="bg-gradient-to-br from-green-50 to-emerald-50 border border-green-200 rounded-2xl p-5">
-                            <h3 className="text-sm font-semibold text-green-800 mb-2">📌 Tips for Better Visibility</h3>
-                            <ul className="text-xs text-green-700 space-y-1.5 leading-relaxed">
-                                <li>• Add detailed job descriptions to attract the right candidates</li>
-                                <li>• Include required skills so students can self-filter</li>
-                                <li>• Set a realistic salary range — it significantly increases applications</li>
-                                <li>• You can edit a post within <strong>2 minutes</strong> of publishing</li>
-                            </ul>
-                        </div>
                     </div>
 
                     {/* Recent listings panel */}
