@@ -1,5 +1,7 @@
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
+import { api } from "../../services/api";
 
 const StatCard = ({ label, value, icon, accent }) => (
     <div className="bg-white border border-gray-200 rounded-2xl p-5 hover:border-gray-300 transition-colors">
@@ -42,6 +44,22 @@ const DarkActionCard = ({ to, icon, title, description, disabled }) => (
 
 export default function StudentDashboard() {
     const { user } = useAuth();
+    const [jobs, setJobs] = useState([]);
+    const [jobsLoading, setJobsLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchJobs = async () => {
+            try {
+                const res = await api.get("/api/jobs?type=Internship");
+                setJobs(res.data.jobs?.slice(0, 6) || []); // Show latest 6 internships
+            } catch (e) {
+                setJobs([]);
+            } finally {
+                setJobsLoading(false);
+            }
+        };
+        fetchJobs();
+    }, []);
 
     return (
         <div className="min-h-screen bg-gray-50">
@@ -67,6 +85,60 @@ export default function StudentDashboard() {
                     <StatCard label="Shortlisted" value="0" icon="⭐" accent="text-indigo-400" />
                     <StatCard label="Quizzes Done" value="0" icon="🧠" accent="text-violet-400" />
                     <StatCard label="Modules Progress" value="0%" icon="📈" accent="text-purple-400" />
+                </div>
+
+                {/* Latest Internships */}
+                <div className="mb-10">
+                    <div className="flex items-center justify-between mb-6">
+                        <h2 className="text-lg font-semibold text-gray-900">Latest Internship Opportunities</h2>
+                        <Link to="/" className="text-sm text-blue-600 hover:underline font-medium">View all →</Link>
+                    </div>
+
+                    {jobsLoading ? (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                            {[...Array(6)].map((_, i) => (
+                                <div key={i} className="bg-white border border-gray-200 rounded-2xl p-5 animate-pulse">
+                                    <div className="flex gap-3 mb-3">
+                                        <div className="w-10 h-10 rounded-xl bg-gray-100 flex-shrink-0" />
+                                        <div className="flex-1 space-y-2">
+                                            <div className="h-3 bg-gray-100 rounded w-3/4" />
+                                            <div className="h-3 bg-gray-100 rounded w-1/2" />
+                                        </div>
+                                    </div>
+                                    <div className="h-8 bg-gray-100 rounded" />
+                                </div>
+                            ))}
+                        </div>
+                    ) : jobs.length === 0 ? (
+                        <div className="text-center py-12 bg-white border border-gray-200 rounded-2xl">
+                            <p className="text-4xl mb-3">📭</p>
+                            <p className="text-sm text-gray-500">No internships available right now. Check back soon!</p>
+                        </div>
+                    ) : (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                            {jobs.map((job) => (
+                                <div key={job._id} className="bg-white border border-gray-200 rounded-2xl p-5 hover:border-blue-300 hover:shadow-md transition-all duration-200 hover:-translate-y-0.5">
+                                    <div className="flex items-start gap-3 mb-3">
+                                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-lg font-bold flex-shrink-0 ${job.company ? "bg-blue-100 text-blue-700" : "bg-gray-100 text-gray-600"}`}>
+                                            {job.company?.[0]?.toUpperCase() || "J"}
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <h3 className="text-sm font-semibold text-gray-900 truncate">{job.title}</h3>
+                                            <p className="text-sm text-gray-500">{job.company}</p>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-2 flex-wrap text-xs mb-4">
+                                        <span className="text-gray-500">📍 {job.location}</span>
+                                        {job.workMode && <span className="bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full">{job.workMode}</span>}
+                                    </div>
+                                    {job.salaryDisplay && <p className="text-xs text-emerald-700 font-semibold mb-4">💰 {job.salaryDisplay}</p>}
+                                    <Link to={`/job/${job._id}`} className="w-full text-center text-sm font-medium text-blue-600 border border-blue-200 rounded-xl py-2 hover:bg-blue-600 hover:text-white hover:border-blue-600 transition-colors bg-blue-50 block">
+                                        View & Apply
+                                    </Link>
+                                </div>
+                            ))}
+                        </div>
+                    )}
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
