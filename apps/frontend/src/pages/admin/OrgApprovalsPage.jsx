@@ -44,7 +44,7 @@ export default function OrgApprovalsPage() {
         finally { setActionLoading(false); }
     };
 
-    const docUrl = (url) => url ? `${import.meta.env.VITE_API_URL || "http://localhost:3000"}${url}` : null;
+    const docUrl = (url) => url ? `${import.meta.env.VITE_API_URL || "http://localhost:5000"}${url}` : null;
 
     return (
         <div className="min-h-screen bg-gray-50">
