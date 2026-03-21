@@ -1,6 +1,6 @@
 import { Job } from "../models/job.model.js";
 
-const EDIT_WINDOW_MS = 10 * 60 * 1000; // 10 minutes
+const EDIT_WINDOW_MS = 2 * 60 * 1000; // 2 minutes
 
 const salaryDisplay = (job) => {
     if (!job.salaryMin && !job.salaryMax) return "";
