@@ -94,12 +94,34 @@ export default function PostJobPage() {
     const handleSubmit = async (e) => {
         e.preventDefault(); setError(""); setSuccess(""); setFormLoading(true);
         try {
+            const salaryMinNumber = form.salaryMin ? Number(form.salaryMin) : null;
+            const salaryMaxNumber = form.salaryMax ? Number(form.salaryMax) : null;
+
+            if (salaryMinNumber !== null && salaryMinNumber < 0) {
+                throw new Error("Minimum salary must be 0 or greater.");
+            }
+            if (salaryMaxNumber !== null && salaryMaxNumber < 0) {
+                throw new Error("Maximum salary must be 0 or greater.");
+            }
+            if (salaryMinNumber !== null && salaryMaxNumber !== null && salaryMaxNumber < salaryMinNumber) {
+                throw new Error("Maximum salary cannot be lower than minimum salary.");
+            }
+
+            if (form.deadline) {
+                const selectedDate = new Date(form.deadline);
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                if (selectedDate < today) {
+                    throw new Error("Application deadline cannot be in the past.");
+                }
+            }
+
             const payload = {
                 ...form,
                 skills: form.skills.split(",").map((s) => s.trim()).filter(Boolean),
                 deadline: form.deadline || null,
-                salaryMin: form.salaryMin ? Number(form.salaryMin) : null,
-                salaryMax: form.salaryMax ? Number(form.salaryMax) : null,
+                salaryMin: salaryMinNumber,
+                salaryMax: salaryMaxNumber,
             };
             if (editingId) {
                 await api.put(`/api/jobs/${editingId}`, payload);
@@ -109,7 +131,7 @@ export default function PostJobPage() {
                 setSuccess("Job posted! It will appear on the home page. You can edit within 10 minutes.");
             }
             setForm(emptyForm); setEditingId(null); setShowForm(false); fetchJobs();
-        } catch (e) { setError(e.response?.data?.message || "Failed to save job"); }
+        } catch (e) { setError(e.response?.data?.message || e.message || "Failed to save job"); }
         finally { setFormLoading(false); }
     };
 
@@ -253,7 +275,13 @@ export default function PostJobPage() {
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <div>
                                     <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">Application Deadline</label>
-                                    <input type="date" value={form.deadline} onChange={set("deadline")} className={inp} />
+                                    <input
+                                        type="date"
+                                        min={new Date().toISOString().slice(0, 10)}
+                                        value={form.deadline}
+                                        onChange={set("deadline")}
+                                        className={inp}
+                                    />
                                 </div>
                                 <div>
                                     <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">Skills (comma-separated)</label>
