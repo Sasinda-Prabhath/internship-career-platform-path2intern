@@ -1,4 +1,5 @@
 import { Job } from "../models/job.model.js";
+import PDFDocument from "pdfkit";
 
 const EDIT_WINDOW_MS = 2 * 60 * 1000; // 2 minutes
 
@@ -152,6 +153,77 @@ export const deleteJob = async (req, res) => {
             return res.status(403).json({ message: "You can only delete your own job posts" });
         await Job.deleteOne({ _id: job._id });
         res.json({ message: "Job deleted" });
+    } catch (e) {
+        res.status(500).json({ message: e.message });
+    }
+};
+
+// GET /api/jobs/download-pdf  — org only, download PDF of their jobs
+export const downloadJobsPDF = async (req, res) => {
+    try {
+        const jobs = await Job.find({ postedBy: req.user.userId })
+            .sort({ createdAt: -1 })
+            .lean();
+
+        if (jobs.length === 0) {
+            return res.status(404).json({ message: "No jobs found" });
+        }
+
+        // Create PDF document
+        const doc = new PDFDocument();
+        const filename = `jobs_${new Date().toISOString().split('T')[0]}.pdf`;
+
+        // Set response headers
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+
+        // Pipe PDF to response
+        doc.pipe(res);
+
+        // Add title
+        doc.fontSize(20).text('My Job Postings', { align: 'center' });
+        doc.moveDown();
+        doc.fontSize(12).text(`Generated on ${new Date().toLocaleDateString()}`, { align: 'center' });
+        doc.moveDown(2);
+
+        // Add each job
+        jobs.forEach((job, index) => {
+            if (index > 0) doc.addPage();
+
+            doc.fontSize(16).text(job.title, { underline: true });
+            doc.moveDown(0.5);
+            doc.fontSize(12).text(`Company: ${job.company}`);
+            doc.text(`Location: ${job.location}`);
+            doc.text(`Type: ${job.type} | Work Mode: ${job.workMode}`);
+            if (job.duration) doc.text(`Duration: ${job.duration}`);
+            const salary = salaryDisplay(job);
+            if (salary) doc.text(`Salary: ${salary}`);
+            if (job.deadline) doc.text(`Deadline: ${new Date(job.deadline).toLocaleDateString()}`);
+            doc.text(`Posted: ${new Date(job.createdAt).toLocaleDateString()}`);
+            doc.moveDown();
+
+            doc.fontSize(14).text('Description:', { underline: true });
+            doc.moveDown(0.5);
+            doc.fontSize(10).text(job.description);
+            doc.moveDown();
+
+            if (job.skills && job.skills.length > 0) {
+                doc.fontSize(14).text('Required Skills:', { underline: true });
+                doc.moveDown(0.5);
+                doc.fontSize(10).list(job.skills);
+                doc.moveDown();
+            }
+
+            if (job.requirements) {
+                doc.fontSize(14).text('Requirements:', { underline: true });
+                doc.moveDown(0.5);
+                doc.fontSize(10).text(job.requirements);
+                doc.moveDown();
+            }
+        });
+
+        // Finalize PDF
+        doc.end();
     } catch (e) {
         res.status(500).json({ message: e.message });
     }

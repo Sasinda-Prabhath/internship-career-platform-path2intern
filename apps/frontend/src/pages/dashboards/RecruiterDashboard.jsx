@@ -18,8 +18,8 @@ const StatCard = ({ label, value, icon, accent, sub }) => (
 );
 
 /* ── Job row in recent listings ────────────────────────────────────────── */
-const JobRow = ({ job }) => {
-    const age = Date.now() - new Date(job.createdAt).getTime();
+const JobRow = ({ job, currentTime }) => {
+    const age = currentTime - new Date(job.createdAt).getTime();
     const canEdit = age < 10 * 60 * 1000;
     const WORK_COLORS = {
         Remote: "bg-green-100 text-green-700",
@@ -80,6 +80,7 @@ export default function OrgDashboard() {
     const { user } = useAuth();
     const [jobs, setJobs] = useState([]);
     const [loading, setLoading] = useState(true);
+    const currentTime = Date.now();
 
     const fetchJobs = useCallback(async () => {
         try {
@@ -170,6 +171,18 @@ export default function OrgDashboard() {
                                     description="View, edit (within 10 min), or delete your job posts."
                                     accent="blue"
                                 />
+                                <div className="bg-white border border-gray-200 rounded-2xl p-5 flex items-start gap-4 hover:border-purple-300 hover:-translate-y-0.5 hover:shadow-md cursor-pointer transition-all duration-200"
+                                    onClick={() => {
+                                        window.open(`${api.defaults.baseURL}/api/jobs/download-pdf`, '_blank');
+                                    }}>
+                                    <div className="w-10 h-10 rounded-xl bg-purple-50 text-purple-600 font-bold text-xs flex items-center justify-center flex-shrink-0">
+                                        📄
+                                    </div>
+                                    <div>
+                                        <p className="text-sm font-semibold text-gray-900 mb-0.5">Download PDF</p>
+                                        <p className="text-xs text-gray-500 leading-relaxed">Get a PDF document of all your posted jobs.</p>
+                                    </div>
+                                </div>
                                 <OrgActionCard
                                     to="#"
                                     icon="👥"
@@ -235,7 +248,7 @@ export default function OrgDashboard() {
 
                         {!loading && jobs.length > 0 && (
                             <div>
-                                {jobs.slice(0, 5).map(job => <JobRow key={job._id} job={job} />)}
+                                {jobs.slice(0, 5).map(job => <JobRow key={job._id} job={job} currentTime={currentTime} />)}
                                 {jobs.length > 5 && (
                                     <Link to="/org/post-job" className="block text-center text-xs text-blue-600 hover:underline mt-3 font-medium">
                                         +{jobs.length - 5} more listings →
