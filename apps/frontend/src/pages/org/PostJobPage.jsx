@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback } from "react";
+import { toast } from "react-toastify";
 import { useAuth } from "../../contexts/AuthContext";
 import { api } from "../../services/api";
 
-const EDIT_WINDOW_MS = 10 * 60 * 1000;
+const EDIT_WINDOW_MS = 2 * 60 * 1000; // 2 minutes
 
 const JOB_TYPES = ["Internship", "Part-time", "Full-time"];
 const WORK_MODES = ["Remote", "Hybrid", "On-site"];
@@ -70,8 +71,6 @@ export default function PostJobPage() {
     const [formLoading, setFormLoading] = useState(false);
     const [form, setForm] = useState(emptyForm);
     const [editingId, setEditingId] = useState(null);
-    const [error, setError] = useState("");
-    const [success, setSuccess] = useState("");
     const [deleteId, setDeleteId] = useState(null);
     const [deleting, setDeleting] = useState(false);
     const [showForm, setShowForm] = useState(false);
@@ -85,14 +84,14 @@ export default function PostJobPage() {
             const res = await api.get("/api/jobs/mine");
             setJobs(res.data.jobs || []);
         } catch (e) {
-            setError(e.response?.data?.message || "Failed to load jobs");
+            toast.error(e.response?.data?.message || "Failed to load jobs");
         } finally { setLoading(false); }
     }, []);
 
     useEffect(() => { fetchJobs(); }, [fetchJobs]);
 
     const handleSubmit = async (e) => {
-        e.preventDefault(); setError(""); setSuccess(""); setFormLoading(true);
+        e.preventDefault(); setFormLoading(true);
         try {
             const salaryMinNumber = form.salaryMin ? Number(form.salaryMin) : null;
             const salaryMaxNumber = form.salaryMax ? Number(form.salaryMax) : null;
@@ -125,13 +124,13 @@ export default function PostJobPage() {
             };
             if (editingId) {
                 await api.put(`/api/jobs/${editingId}`, payload);
-                setSuccess("Job updated successfully.");
+                toast.success("Job updated successfully.");
             } else {
                 await api.post("/api/jobs", payload);
-                setSuccess("Job posted! It will appear on the home page. You can edit within 10 minutes.");
+                toast.success("Job posted! It will appear on the home page. You can edit within 2 minutes.");
             }
             setForm(emptyForm); setEditingId(null); setShowForm(false); fetchJobs();
-        } catch (e) { setError(e.response?.data?.message || e.message || "Failed to save job"); }
+        } catch (e) { toast.error(e.response?.data?.message || e.message || "Failed to save job"); }
         finally { setFormLoading(false); }
     };
 
@@ -147,18 +146,19 @@ export default function PostJobPage() {
             requirements: job.requirements || "",
             deadline: job.deadline ? job.deadline.slice(0, 10) : "",
         });
-        setEditingId(job._id); setError(""); setSuccess(""); setShowForm(true);
+        setEditingId(job._id); setShowForm(true);
         window.scrollTo({ top: 0, behavior: "smooth" });
     };
 
-    const cancelForm = () => { setForm(emptyForm); setEditingId(null); setShowForm(false); setError(""); };
+    const cancelForm = () => { setForm(emptyForm); setEditingId(null); setShowForm(false); };
 
     const handleDelete = async () => {
         setDeleting(true);
         try {
             await api.delete(`/api/jobs/${deleteId}`);
             setJobs((js) => js.filter((j) => j._id !== deleteId)); setDeleteId(null);
-        } catch (e) { alert(e.response?.data?.message || "Failed to delete"); }
+            toast.success("Job deleted successfully.");
+        } catch (e) { toast.error(e.response?.data?.message || "Failed to delete"); }
         finally { setDeleting(false); }
     };
 
@@ -170,7 +170,7 @@ export default function PostJobPage() {
                     <div>
                         <span className="bg-green-100 text-green-700 text-xs font-semibold px-2.5 py-1 rounded-full border border-green-200 uppercase tracking-wider">Organisation</span>
                         <h1 className="text-3xl font-bold text-gray-900 mt-2">Job Postings</h1>
-                        <p className="text-gray-500 mt-1 text-sm">Post internships to reach SLIIT students. Edit within 10 minutes of posting.</p>
+                        <p className="text-gray-500 mt-1 text-sm">Post internships to reach SLIIT students. Edit within 2 minutes of posting.</p>
                     </div>
                     {!showForm && (
                         <button onClick={() => { setShowForm(true); setForm(emptyForm); setEditingId(null); }}
@@ -182,10 +182,6 @@ export default function PostJobPage() {
             </div>
 
             <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
-                {/* Alerts */}
-                {error && <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-xl px-4 py-3">{error}</div>}
-                {success && <div className="bg-green-50 border border-green-200 text-green-700 text-sm rounded-xl px-4 py-3">{success}</div>}
-
                 {/* Post / Edit form */}
                 {showForm && (
                     <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">

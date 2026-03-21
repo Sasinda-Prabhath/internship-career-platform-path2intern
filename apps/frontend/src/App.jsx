@@ -1,4 +1,6 @@
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 import Navbar from "./components/Navbar";
 import ProtectedRoute from "./components/ProtectedRoute";
 import DashboardLayout from "./components/DashboardLayout";
@@ -50,6 +52,7 @@ function App() {
   return (
     <Router>
       <div className="min-h-screen bg-[#0a0f1e] font-sans text-gray-900 flex flex-col">
+        <ToastContainer />
 
         <Routes>
           {/* ── Public ─────────────────────────────────────────── */}
