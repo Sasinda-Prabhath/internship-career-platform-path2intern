@@ -18,9 +18,10 @@ const TYPE_COLORS = {
 };
 const LOGO_COLORS = ["bg-blue-600", "bg-violet-600", "bg-pink-600", "bg-green-600", "bg-amber-500", "bg-cyan-600", "bg-rose-600", "bg-indigo-600"];
 const logoColor = (name) => LOGO_COLORS[(name?.charCodeAt(0) || 0) % LOGO_COLORS.length];
+const hasDeadlinePassed = (deadline) => deadline && new Date(deadline).getTime() < Date.now();
 
 /* ── Job card ────────────────────────────────────────────────────────────── */
-function JobCard({ job }) {
+function JobCard({ job, onViewApply, applyLabel = "View & Apply", applyDisabled = false }) {
   const initials = (job.company || "?").split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase();
   return (
     <div className="bg-white border border-gray-200 rounded-2xl p-5 hover:border-blue-300 hover:shadow-md transition-all duration-200 hover:-translate-y-0.5 flex flex-col gap-3">
@@ -53,7 +54,133 @@ function JobCard({ job }) {
       )}
       {job.salaryDisplay && <p className="text-xs text-emerald-700 font-semibold">💰 {job.salaryDisplay}</p>}
       {job.deadline && <p className="text-xs text-gray-400">Deadline: {new Date(job.deadline).toLocaleDateString()}</p>}
-      <button className="mt-auto w-full text-center text-sm font-medium text-blue-600 border border-blue-200 rounded-xl py-2 hover:bg-blue-600 hover:text-white hover:border-blue-600 transition-colors bg-blue-50">View & Apply</button>
+      <button
+        type="button"
+        onClick={() => onViewApply?.(job)}
+        disabled={applyDisabled}
+        className={`mt-auto w-full text-center text-sm font-medium rounded-xl py-2 transition-colors border ${applyDisabled
+          ? "text-gray-400 border-gray-200 bg-gray-100 cursor-not-allowed"
+          : "text-blue-600 border-blue-200 hover:bg-blue-600 hover:text-white hover:border-blue-600 bg-blue-50"
+          }`}
+      >
+        {applyLabel}
+      </button>
+    </div>
+  );
+}
+
+function ApplyJobModal({ job, onClose, onApplied }) {
+  const [cvFile, setCvFile] = useState(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    setCvFile(null);
+    setSubmitting(false);
+    setError("");
+  }, [job]);
+
+  if (!job) return null;
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!cvFile) {
+      setError("Please upload your CV as a PDF.");
+      return;
+    }
+
+    setSubmitting(true);
+    setError("");
+    try {
+      const formData = new FormData();
+      formData.append("cv", cvFile);
+      await api.post(`/api/jobs/${job._id}/apply`, formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      onApplied(job._id);
+    } catch (err) {
+      setError(err.response?.data?.message || "Failed to submit application.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/55 backdrop-blur-sm flex items-center justify-center p-4">
+      <div className="w-full max-w-2xl bg-white rounded-3xl shadow-2xl border border-gray-200 overflow-hidden">
+        <div className="px-6 py-5 border-b border-gray-200 flex items-start justify-between gap-4">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-widest text-blue-600 mb-2">Apply Now</p>
+            <h2 className="text-2xl font-bold text-gray-900">{job.title}</h2>
+            <p className="text-sm text-gray-500 mt-1">{job.company} · {job.location}</p>
+          </div>
+          <button type="button" onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl leading-none">×</button>
+        </div>
+
+        <div className="px-6 py-5 grid gap-6 md:grid-cols-[1.1fr_0.9fr]">
+          <div>
+            <div className="flex flex-wrap gap-2 mb-4 text-xs">
+              {job.workMode && <span className={`px-2 py-1 rounded-full border ${WORK_MODE_COLORS[job.workMode] || "bg-gray-100 text-gray-600 border-gray-200"}`}>{job.workMode}</span>}
+              {job.type && <span className={`px-2 py-1 rounded-full border ${TYPE_COLORS[job.type] || "bg-gray-100 text-gray-600 border-gray-200"}`}>{job.type}</span>}
+              {job.duration && <span className="px-2 py-1 rounded-full border bg-gray-100 text-gray-700 border-gray-200">{job.duration}</span>}
+            </div>
+            <div className="space-y-4 text-sm text-gray-600">
+              <div>
+                <h3 className="text-sm font-semibold text-gray-900 mb-1">Job Description</h3>
+                <p className="leading-relaxed whitespace-pre-line">{job.description}</p>
+              </div>
+              {job.requirements && (
+                <div>
+                  <h3 className="text-sm font-semibold text-gray-900 mb-1">Requirements</h3>
+                  <p className="leading-relaxed whitespace-pre-line">{job.requirements}</p>
+                </div>
+              )}
+              {job.skills?.length > 0 && (
+                <div>
+                  <h3 className="text-sm font-semibold text-gray-900 mb-2">Skills</h3>
+                  <div className="flex flex-wrap gap-2">
+                    {job.skills.map((skill) => (
+                      <span key={skill} className="text-xs bg-blue-50 text-blue-700 border border-blue-200 px-2 py-1 rounded-full">{skill}</span>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <form onSubmit={handleSubmit} className="bg-gray-50 border border-gray-200 rounded-2xl p-5 space-y-4">
+            <div>
+              <h3 className="text-base font-semibold text-gray-900">Submit your CV</h3>
+              <p className="text-sm text-gray-500 mt-1">Upload a PDF CV and send it directly to the organisation for review.</p>
+            </div>
+
+            {job.salaryDisplay && <p className="text-sm text-emerald-700 font-semibold">Salary: {job.salaryDisplay}</p>}
+            {job.deadline && <p className="text-sm text-gray-500">Deadline: {new Date(job.deadline).toLocaleDateString()}</p>}
+
+            <label className="block">
+              <span className="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-2">CV PDF</span>
+              <input
+                type="file"
+                accept=".pdf,application/pdf"
+                onChange={(e) => setCvFile(e.target.files?.[0] || null)}
+                className="block w-full text-sm text-gray-600 file:mr-4 file:rounded-xl file:border-0 file:bg-blue-600 file:px-4 file:py-2.5 file:text-sm file:font-semibold file:text-white hover:file:bg-blue-700"
+              />
+              <p className="mt-2 text-xs text-gray-400">Only PDF files up to 5 MB are allowed.</p>
+            </label>
+
+            {error && <div className="bg-red-50 border border-red-200 text-red-600 text-sm rounded-xl px-4 py-3">{error}</div>}
+
+            <div className="flex gap-3 pt-2">
+              <button type="button" onClick={onClose} className="flex-1 border border-gray-300 text-gray-700 rounded-xl py-2.5 text-sm font-semibold hover:bg-gray-100 transition-colors">
+                Cancel
+              </button>
+              <button type="submit" disabled={submitting} className="flex-1 bg-blue-600 hover:bg-blue-700 text-white rounded-xl py-2.5 text-sm font-semibold transition-colors disabled:opacity-60">
+                {submitting ? "Submitting..." : "Apply Now"}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
     </div>
   );
 }
@@ -136,6 +263,8 @@ export default function Home() {
   const [search, setSearch] = useState("");
   const [workMode, setWorkMode] = useState("");
   const [type, setType] = useState("");
+  const [selectedJob, setSelectedJob] = useState(null);
+  const [appliedJobIds, setAppliedJobIds] = useState([]);
 
   useEffect(() => {
     const fetchJobs = async () => {
@@ -157,6 +286,13 @@ export default function Home() {
   /* ── Logged-in view ─────────────────────────────────────────────── */
   if (!authLoading && user) {
     const dashboardRoute = getDashboardRoute(user.globalRole, user.moduleScopedRoles);
+    const isStudent = user.globalRole === "STUDENT";
+
+    const markApplied = (jobId) => {
+      setAppliedJobIds((current) => (current.includes(jobId) ? current : [...current, jobId]));
+      setSelectedJob(null);
+    };
+
     return (
       <div className="min-h-screen bg-gray-50 flex flex-col">
         <AppNavbar user={user} logout={logout} />
@@ -208,10 +344,29 @@ export default function Home() {
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-              {jobs.map((job) => <JobCard key={job._id} job={job} />)}
+              {jobs.map((job) => {
+                const alreadyApplied = appliedJobIds.includes(job._id);
+                const deadlinePassed = hasDeadlinePassed(job.deadline);
+                const applyDisabled = !isStudent || alreadyApplied || deadlinePassed;
+                let applyLabel = "View & Apply";
+                if (!isStudent) applyLabel = "Students only";
+                else if (deadlinePassed) applyLabel = "Applications closed";
+                else if (alreadyApplied) applyLabel = "Applied";
+
+                return (
+                  <JobCard
+                    key={job._id}
+                    job={job}
+                    onViewApply={setSelectedJob}
+                    applyDisabled={applyDisabled}
+                    applyLabel={applyLabel}
+                  />
+                );
+              })}
             </div>
           )}
         </main>
+        <ApplyJobModal job={selectedJob} onClose={() => setSelectedJob(null)} onApplied={markApplied} />
         <footer className="border-t border-gray-200 py-6 text-center bg-white">
           <p className="text-gray-400 text-sm">© {new Date().getFullYear()} Path2Intern. All rights reserved.</p>
         </footer>
