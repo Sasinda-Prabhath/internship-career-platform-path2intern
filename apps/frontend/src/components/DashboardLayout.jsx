@@ -37,6 +37,7 @@ const NAV = {
         items: [
             { label: "Overview", to: "/dashboard/recruiter", icon: "grid" },
             { label: "Post a Job", to: "/org/post-job", icon: "plus" },
+            { label: "Review Applications", to: "/org/review-applications", icon: "users" },
         ],
     },
     // RECRUITER is the legacy name for ORGANIZATION — same nav config
@@ -48,6 +49,7 @@ const NAV = {
         items: [
             { label: "Overview", to: "/dashboard/recruiter", icon: "grid" },
             { label: "Post a Job", to: "/org/post-job", icon: "plus" },
+            { label: "Review Applications", to: "/org/review-applications", icon: "users" },
         ],
     },
     STUDENT: {
@@ -57,6 +59,7 @@ const NAV = {
         dot: "bg-blue-500",
         items: [
             { label: "Overview", to: "/dashboard/student", icon: "grid" },
+            { label: "My Applications", to: "/student/my-applications", icon: "users" },
             { label: "Browse Internships", to: "/", icon: "search" },
             { label: "Take a Quiz", to: "/quiz", icon: "quiz" },
         ],
