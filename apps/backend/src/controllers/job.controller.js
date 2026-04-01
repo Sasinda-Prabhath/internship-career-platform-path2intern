@@ -41,6 +41,20 @@ export const getJobs = async (req, res) => {
     }
 };
 
+// GET /api/jobs/:id - public, get single job details
+export const getJobById = async (req, res) => {
+    try {
+        const job = await Job.findById(req.params.id)
+            .populate("postedBy", "name email organizationName")
+            .lean();
+        if (!job) return res.status(404).json({ message: "Job not found" });
+        job.salaryDisplay = salaryDisplay(job);
+        res.json({ job });
+    } catch (e) {
+        res.status(500).json({ message: e.message });
+    }
+};
+
 // GET /api/jobs/mine  — org only, their own jobs
 export const getMyJobs = async (req, res) => {
     try {

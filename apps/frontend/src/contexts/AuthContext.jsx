@@ -19,6 +19,10 @@ export function AuthProvider({ children }) {
         setUser(userData);
     };
 
+    const updateUser = (updates) => {
+        setUser(prev => prev ? { ...prev, ...updates } : null);
+    };
+
     const logout = async () => {
         try {
             await api.post("/api/auth/logout");
@@ -29,7 +33,7 @@ export function AuthProvider({ children }) {
     };
 
     return (
-        <AuthContext.Provider value={{ user, loading, login, logout }}>
+        <AuthContext.Provider value={{ user, loading, login, logout, updateUser }}>
             {children}
         </AuthContext.Provider>
     );

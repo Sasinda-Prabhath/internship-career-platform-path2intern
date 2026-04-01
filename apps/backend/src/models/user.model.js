@@ -68,6 +68,10 @@ const userSchema = new mongoose.Schema(
     // ── Optional relations ───────────────────────────────────────────────────
     universityId: { type: mongoose.Schema.Types.ObjectId, ref: "University", default: null },
     organizationId: { type: mongoose.Schema.Types.ObjectId, ref: "Organization", default: null },
+
+    // ── Student CV Data ──────────────────────────────────────────────────────
+    cvFilename: { type: String, default: null },
+    cvText: { type: String, default: null },
   },
   { timestamps: true }
 );

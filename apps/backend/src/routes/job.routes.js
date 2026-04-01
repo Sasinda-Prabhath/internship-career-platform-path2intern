@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { getJobs, getMyJobs, createJob, updateJob, deleteJob } from "../controllers/job.controller.js";
+import { getJobs, getJobById, getMyJobs, createJob, updateJob, deleteJob } from "../controllers/job.controller.js";
 import { requireAuth, requireRole } from "../middleware/auth.middleware.js";
 
 const router = Router();
@@ -8,8 +8,12 @@ const router = Router();
 router.get("/", getJobs);
 
 // Org-only routes
+// Important: /mine MUST be defined before /:id so it doesn't get swallowed
+router.get("/mine", requireAuth, requireRole("ORGANIZATION"), getMyJobs);
+
+router.get("/:id", getJobById);
+
 router.use(requireAuth);
-router.get("/mine", requireRole("ORGANIZATION"), getMyJobs);
 router.post("/", requireRole("ORGANIZATION"), createJob);
 router.put("/:id", requireRole("ORGANIZATION"), updateJob);
 router.delete("/:id", requireRole("ORGANIZATION"), deleteJob);

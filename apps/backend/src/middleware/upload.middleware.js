@@ -30,3 +30,20 @@ export const uploadOrgDoc = multer({
     fileFilter,
     limits: { fileSize: 5 * 1024 * 1024 }, // 5 MB max
 }).single("document");
+
+const resumeDir = path.join(__dirname, "../../uploads/resumes");
+if (!fs.existsSync(resumeDir)) fs.mkdirSync(resumeDir, { recursive: true });
+
+const resumeStorage = multer.diskStorage({
+    destination: (_req, _file, cb) => cb(null, resumeDir),
+    filename: (_req, file, cb) => {
+        const unique = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
+        cb(null, `resume-${unique}${path.extname(file.originalname)}`);
+    },
+});
+
+export const uploadResume = multer({
+    storage: resumeStorage,
+    fileFilter,
+    limits: { fileSize: 10 * 1024 * 1024 }, // 10 MB max for CVs
+}).single("resume");
