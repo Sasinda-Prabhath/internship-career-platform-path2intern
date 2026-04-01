@@ -1,5 +1,11 @@
 import { Job } from "../models/job.model.js";
+import { Application } from "../models/application.model.js";
 import PDFDocument from "pdfkit";
+import fs from "fs";
+import path from "path";
+import { fileURLToPath } from "url";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const EDIT_WINDOW_MS = 2 * 60 * 1000; // 2 minutes
 
@@ -11,6 +17,15 @@ const salaryDisplay = (job) => {
     if (job.salaryMin) return `From ${cur} ${job.salaryMin.toLocaleString()} / ${per}`;
     return `Up to ${cur} ${job.salaryMax.toLocaleString()} / ${per}`;
 };
+
+const resolveUploadPath = (fileUrl) => path.join(__dirname, "../../", fileUrl.replace(/^\//, ""));
+
+const buildApplicationSummary = (application) => ({
+    ...application,
+    cvDownloadUrl: `/api/jobs/applications/${application._id}/download-cv`,
+});
+
+const allowedApplicationStatuses = ["submitted", "shortlisted", "rejected"];
 
 // GET /api/jobs  — public, all active jobs newest first
 export const getJobs = async (req, res) => {
@@ -48,10 +63,25 @@ export const getMyJobs = async (req, res) => {
         const jobs = await Job.find({ postedBy: req.user.userId })
             .sort({ createdAt: -1 })
             .lean();
+        const applicationsByJob = await Application.aggregate([
+            {
+                $match: {
+                    organization: jobObjectId(req.user.userId),
+                },
+            },
+            {
+                $group: {
+                    _id: "$job",
+                    total: { $sum: 1 },
+                },
+            },
+        ]);
+        const counts = new Map(applicationsByJob.map((entry) => [entry._id.toString(), entry.total]));
         const now = Date.now();
         const annotated = jobs.map((j) => ({
             ...j,
             salaryDisplay: salaryDisplay(j),
+            applicationCount: counts.get(j._id.toString()) || 0,
             canEdit: now - new Date(j.createdAt).getTime() < EDIT_WINDOW_MS,
             editExpiresAt: new Date(new Date(j.createdAt).getTime() + EDIT_WINDOW_MS),
         }));
@@ -151,8 +181,137 @@ export const deleteJob = async (req, res) => {
         if (!job) return res.status(404).json({ message: "Job not found" });
         if (job.postedBy.toString() !== req.user.userId)
             return res.status(403).json({ message: "You can only delete your own job posts" });
+        await Application.deleteMany({ job: job._id });
         await Job.deleteOne({ _id: job._id });
         res.json({ message: "Job deleted" });
+    } catch (e) {
+        res.status(500).json({ message: e.message });
+    }
+};
+
+const jobObjectId = (id) => Application.db.base.Types.ObjectId.createFromHexString(id);
+
+// POST /api/jobs/:id/apply  — student only
+export const applyToJob = async (req, res) => {
+    try {
+        const job = await Job.findOne({ _id: req.params.id, status: "active" }).lean();
+        if (!job) return res.status(404).json({ message: "Job not found" });
+
+        if (!req.file) {
+            return res.status(400).json({ message: "Please upload your CV as a PDF" });
+        }
+
+        if (String(job.postedBy) === req.user.userId) {
+            return res.status(400).json({ message: "You cannot apply to your own job post" });
+        }
+
+        if (job.deadline && new Date(job.deadline).getTime() < Date.now()) {
+            return res.status(400).json({ message: "This application deadline has passed" });
+        }
+
+        const existing = await Application.findOne({ job: job._id, student: req.user.userId }).lean();
+        if (existing) {
+            return res.status(409).json({ message: "You have already applied to this job" });
+        }
+
+        const application = await Application.create({
+            job: job._id,
+            student: req.user.userId,
+            organization: job.postedBy,
+            cvUrl: `/uploads/student-cvs/${req.file.filename}`,
+            cvOriginalName: req.file.originalname,
+        });
+
+        res.status(201).json({
+            message: "Application submitted successfully",
+            application: buildApplicationSummary(application.toObject()),
+        });
+    } catch (e) {
+        if (e.code === 11000) {
+            return res.status(409).json({ message: "You have already applied to this job" });
+        }
+        res.status(400).json({ message: e.message });
+    }
+};
+
+// GET /api/jobs/applications/mine  — student only
+export const getMyApplications = async (req, res) => {
+    try {
+        const applications = await Application.find({ student: req.user.userId })
+            .populate("job", "title company location type workMode deadline status")
+            .populate("organization", "name organizationName")
+            .sort({ createdAt: -1 })
+            .lean();
+        res.json({ total: applications.length, applications });
+    } catch (e) {
+        res.status(500).json({ message: e.message });
+    }
+};
+
+// GET /api/jobs/applications/received  — organization only
+export const getReceivedApplications = async (req, res) => {
+    try {
+        const applications = await Application.find({ organization: req.user.userId })
+            .populate("student", "name email")
+            .populate("job", "title company location type workMode deadline")
+            .sort({ createdAt: -1 })
+            .lean();
+
+        const result = applications.map(buildApplicationSummary);
+        res.json({ total: result.length, applications: result });
+    } catch (e) {
+        res.status(500).json({ message: e.message });
+    }
+};
+
+// PATCH /api/jobs/applications/:applicationId/status  — organization only
+export const updateApplicationStatus = async (req, res) => {
+    try {
+        const { status } = req.body;
+        if (!allowedApplicationStatuses.includes(status)) {
+            return res.status(400).json({ message: "Invalid application status" });
+        }
+
+        const application = await Application.findOne({
+            _id: req.params.applicationId,
+            organization: req.user.userId,
+        })
+            .populate("student", "name email")
+            .populate("job", "title company location type workMode deadline");
+
+        if (!application) {
+            return res.status(404).json({ message: "Application not found" });
+        }
+
+        application.status = status;
+        await application.save();
+
+        res.json({
+            message: "Application status updated",
+            application: buildApplicationSummary(application.toObject()),
+        });
+    } catch (e) {
+        res.status(500).json({ message: e.message });
+    }
+};
+
+// GET /api/jobs/applications/:applicationId/download-cv  — organization only
+export const downloadApplicationCv = async (req, res) => {
+    try {
+        const application = await Application.findOne({
+            _id: req.params.applicationId,
+            organization: req.user.userId,
+        }).lean();
+        if (!application) {
+            return res.status(404).json({ message: "Application not found" });
+        }
+
+        const absolutePath = resolveUploadPath(application.cvUrl);
+        if (!fs.existsSync(absolutePath)) {
+            return res.status(404).json({ message: "CV file not found" });
+        }
+
+        res.download(absolutePath, application.cvOriginalName);
     } catch (e) {
         res.status(500).json({ message: e.message });
     }

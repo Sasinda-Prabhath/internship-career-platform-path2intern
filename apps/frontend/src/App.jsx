@@ -28,6 +28,7 @@ import QuestionBankPage from "./pages/module/QuestionBankPage";
 
 // Student pages
 import QuizPage from "./pages/quiz/QuizPage";
+import MyApplicationsPage from "./pages/student/MyApplicationsPage";
 
 // University Admin pages
 import StaffManagementPage from "./pages/staff/StaffManagementPage";
@@ -36,6 +37,7 @@ import ContactsPage from "./pages/admin/ContactsPage";
 
 // Organisation pages
 import PostJobPage from "./pages/org/PostJobPage";
+import ReviewApplicationsPage from "./pages/org/ReviewApplicationsPage";
 
 /** Wraps a page with auth guard + left sidebar */
 function DashboardRoute({ allowedRoles, children }) {
@@ -98,7 +100,9 @@ function App() {
           <Route path="/module/review" element={<DashboardRoute allowedRoles={["MODULE_MANAGER"]}><ReviewQueuePage /></DashboardRoute>} />
           <Route path="/module/question-bank" element={<DashboardRoute allowedRoles={["MODULE_MANAGER", "MODULE_OPERATOR"]}><QuestionBankPage /></DashboardRoute>} />
           <Route path="/quiz" element={<DashboardRoute allowedRoles={["STUDENT"]}><QuizPage /></DashboardRoute>} />
+          <Route path="/student/my-applications" element={<DashboardRoute allowedRoles={["STUDENT"]}><MyApplicationsPage /></DashboardRoute>} />
           <Route path="/org/post-job" element={<DashboardRoute allowedRoles={["ORGANIZATION", "RECRUITER"]}><PostJobPage /></DashboardRoute>} />
+          <Route path="/org/review-applications" element={<DashboardRoute allowedRoles={["ORGANIZATION", "RECRUITER"]}><ReviewApplicationsPage /></DashboardRoute>} />
           <Route path="/admin/org-approvals" element={<DashboardRoute allowedRoles={["UNIVERSITY_ADMIN", "SYSTEM_ADMIN"]}><OrgApprovalsPage /></DashboardRoute>} />
           <Route path="/admin/contacts" element={<DashboardRoute allowedRoles={["SYSTEM_ADMIN"]}><ContactsPage /></DashboardRoute>} />
         </Routes>
