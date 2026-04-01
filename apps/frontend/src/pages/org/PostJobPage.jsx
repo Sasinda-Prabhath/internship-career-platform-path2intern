@@ -1,11 +1,11 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { toast } from "react-toastify";
 import { useAuth } from "../../contexts/AuthContext";
 import { api } from "../../services/api";
 
 const EDIT_WINDOW_MS = 2 * 60 * 1000; // 2 minutes
 
-const JOB_TYPES = ["Internship", "Part-time", "Full-time"];
+const JOB_TYPES = ["Internship"];
 const WORK_MODES = ["Remote", "Hybrid", "On-site"];
 const CURRENCIES = ["LKR", "USD", "EUR"];
 const PERIODS = ["month", "year"];
@@ -64,6 +64,116 @@ const TYPE_COLOR = {
     "Full-time": "bg-emerald-50 text-emerald-700 border-emerald-200",
 };
 
+const alphaSpaceRegex = /^[A-Za-z\s]+$/;
+const companyNameRegex = /^[A-Za-z][A-Za-z0-9\s&'.,()-]*$/;
+
+function validateForm(form) {
+    const errors = {};
+    const title = form.title.trim();
+    const company = form.company.trim();
+    const description = form.description.trim();
+    const requirements = form.requirements.trim();
+    const skillsRaw = form.skills.trim();
+    const minRaw = String(form.salaryMin).trim();
+    const maxRaw = String(form.salaryMax).trim();
+
+    if (!title) {
+        errors.title = "Job title is required.";
+    } else if (!alphaSpaceRegex.test(title)) {
+        errors.title = "Job title must contain only letters.";
+    } else if (title.length < 2) {
+        errors.title = "Job title must be at least 2 characters.";
+    } else if (title.length > 30) {
+        errors.title = "Job title must be at most 30 characters.";
+    }
+
+    if (!company) {
+        errors.company = "Company is required.";
+    } else if (!companyNameRegex.test(company)) {
+        errors.company = "Company name must start with a letter and cannot be only numbers.";
+    } else if (company.length < 2) {
+        errors.company = "Company must be at least 2 characters.";
+    } else if (company.length > 30) {
+        errors.company = "Company must be at most 30 characters.";
+    }
+
+    if (!minRaw) {
+        errors.salaryMin = "Minimum salary is required.";
+    } else {
+        const minNum = Number(minRaw);
+        if (Number.isNaN(minNum)) {
+            errors.salaryMin = "Minimum salary must be a valid number.";
+        } else if (minNum < 0) {
+            errors.salaryMin = "Minimum salary must be 0 or greater.";
+        }
+    }
+
+    if (!maxRaw) {
+        errors.salaryMax = "Maximum salary is required.";
+    } else {
+        const maxNum = Number(maxRaw);
+        if (Number.isNaN(maxNum)) {
+            errors.salaryMax = "Maximum salary must be a valid number.";
+        } else if (maxNum < 0) {
+            errors.salaryMax = "Maximum salary must be 0 or greater.";
+        }
+    }
+
+    if (!errors.salaryMin && !errors.salaryMax) {
+        const minNum = Number(minRaw);
+        const maxNum = Number(maxRaw);
+        if (maxNum <= minNum) {
+            errors.salaryMax = "Maximum salary must be greater than minimum salary.";
+        }
+    }
+
+    if (!description) {
+        errors.description = "Job description is required.";
+    } else if (description.length < 20) {
+        errors.description = "Job description must be at least 20 characters.";
+    } else if (description.length > 1000) {
+        errors.description = "Job description must be at most 1000 characters.";
+    }
+
+    if (requirements) {
+        if (requirements.length < 20) {
+            errors.requirements = "Requirements must be at least 20 characters when provided.";
+        } else if (requirements.length > 500) {
+            errors.requirements = "Requirements must be at most 500 characters.";
+        }
+    }
+
+    if (skillsRaw) {
+        const skillParts = form.skills.split(",");
+        if (skillParts.some((s) => s.trim().length === 0)) {
+            errors.skills = "Skills must be comma-separated without empty values.";
+        }
+    }
+
+    const durationRaw = String(form.duration || "").trim();
+    if (!durationRaw) {
+        errors.duration = "Duration is required.";
+    } else if (durationRaw.startsWith("-")) {
+        errors.duration = "Duration cannot be a negative value.";
+    } else {
+        const durationMatch = durationRaw.match(/^(\d+)\s*months?$/i);
+        if (!durationMatch) {
+            errors.duration = "Duration must start with a number and include month(s), e.g. 6 months.";
+        } else {
+            const months = Number(durationMatch[1]);
+            if (months < 3 || months > 12) {
+                errors.duration = "Duration must be greater than or equal to 3 months and less than or equal to 12 months.";
+            }
+        }
+    }
+
+    if (form.type !== "Internship") {
+        errors.type = "Job type must be Internship.";
+    }
+
+    return errors;
+}
+
 export default function PostJobPage() {
     const { user } = useAuth();
     const [jobs, setJobs] = useState([]);
@@ -74,9 +184,18 @@ export default function PostJobPage() {
     const [deleteId, setDeleteId] = useState(null);
     const [deleting, setDeleting] = useState(false);
     const [showForm, setShowForm] = useState(false);
+    const [touched, setTouched] = useState({});
+    const [submitAttempted, setSubmitAttempted] = useState(false);
 
     const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
+    const markTouched = (k) => () => setTouched((prev) => ({ ...prev, [k]: true }));
     const districts = form.province ? SL_PROVINCES[form.province] || [] : [];
+    const validationErrors = useMemo(() => validateForm(form), [form]);
+    const showError = (field) => {
+        if (submitAttempted || touched[field]) return true;
+        const val = form[field];
+        return typeof val === "string" ? val.trim().length > 0 : false;
+    };
 
     const fetchJobs = useCallback(async () => {
         setLoading(true);
@@ -91,19 +210,26 @@ export default function PostJobPage() {
     useEffect(() => { fetchJobs(); }, [fetchJobs]);
 
     const handleSubmit = async (e) => {
-        e.preventDefault(); setFormLoading(true);
+        e.preventDefault();
+        setSubmitAttempted(true);
+        setFormLoading(true);
         try {
-            const salaryMinNumber = form.salaryMin ? Number(form.salaryMin) : null;
-            const salaryMaxNumber = form.salaryMax ? Number(form.salaryMax) : null;
+            const errors = validateForm(form);
+            if (Object.keys(errors).length > 0) {
+                throw new Error("Please fix validation errors before submitting.");
+            }
 
-            if (salaryMinNumber !== null && salaryMinNumber < 0) {
+            const salaryMinNumber = Number(form.salaryMin);
+            const salaryMaxNumber = Number(form.salaryMax);
+
+            if (salaryMinNumber < 0) {
                 throw new Error("Minimum salary must be 0 or greater.");
             }
-            if (salaryMaxNumber !== null && salaryMaxNumber < 0) {
+            if (salaryMaxNumber < 0) {
                 throw new Error("Maximum salary must be 0 or greater.");
             }
-            if (salaryMinNumber !== null && salaryMaxNumber !== null && salaryMaxNumber < salaryMinNumber) {
-                throw new Error("Maximum salary cannot be lower than minimum salary.");
+            if (salaryMaxNumber <= salaryMinNumber) {
+                throw new Error("Maximum salary must be greater than minimum salary.");
             }
 
             if (form.deadline) {
@@ -117,7 +243,12 @@ export default function PostJobPage() {
 
             const payload = {
                 ...form,
+                title: form.title.trim(),
+                company: form.company.trim(),
+                description: form.description.trim(),
+                requirements: form.requirements.trim(),
                 skills: form.skills.split(",").map((s) => s.trim()).filter(Boolean),
+                type: "Internship",
                 deadline: form.deadline || null,
                 salaryMin: salaryMinNumber,
                 salaryMax: salaryMaxNumber,
@@ -129,7 +260,7 @@ export default function PostJobPage() {
                 await api.post("/api/jobs", payload);
                 toast.success("Job posted! It will appear on the home page. You can edit within 2 minutes.");
             }
-            setForm(emptyForm); setEditingId(null); setShowForm(false); fetchJobs();
+            setForm(emptyForm); setEditingId(null); setShowForm(false); setTouched({}); setSubmitAttempted(false); fetchJobs();
         } catch (e) { toast.error(e.response?.data?.message || e.message || "Failed to save job"); }
         finally { setFormLoading(false); }
     };
@@ -138,7 +269,7 @@ export default function PostJobPage() {
         setForm({
             title: job.title, description: job.description || "", company: job.company,
             province: job.province || "", district: job.district || "",
-            workMode: job.workMode, type: job.type,
+            workMode: job.workMode, type: "Internship",
             duration: job.duration || "",
             salaryMin: job.salaryMin ?? "", salaryMax: job.salaryMax ?? "",
             salaryCurrency: job.salaryCurrency || "LKR", salaryPeriod: job.salaryPeriod || "month",
@@ -146,11 +277,11 @@ export default function PostJobPage() {
             requirements: job.requirements || "",
             deadline: job.deadline ? job.deadline.slice(0, 10) : "",
         });
-        setEditingId(job._id); setShowForm(true);
+        setEditingId(job._id); setShowForm(true); setTouched({}); setSubmitAttempted(false);
         window.scrollTo({ top: 0, behavior: "smooth" });
     };
 
-    const cancelForm = () => { setForm(emptyForm); setEditingId(null); setShowForm(false); };
+    const cancelForm = () => { setForm(emptyForm); setEditingId(null); setShowForm(false); setTouched({}); setSubmitAttempted(false); };
 
     const handleDelete = async () => {
         setDeleting(true);
@@ -173,7 +304,7 @@ export default function PostJobPage() {
                         <p className="text-gray-500 mt-1 text-sm">Post internships to reach SLIIT students. Edit within 2 minutes of posting.</p>
                     </div>
                     {!showForm && (
-                        <button onClick={() => { setShowForm(true); setForm(emptyForm); setEditingId(null); }}
+                        <button onClick={() => { setShowForm(true); setForm(emptyForm); setEditingId(null); setTouched({}); setSubmitAttempted(false); }}
                             className="flex-shrink-0 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold px-5 py-2.5 rounded-xl transition-colors shadow-sm mt-1">
                             + Post a Job
                         </button>
@@ -194,11 +325,13 @@ export default function PostJobPage() {
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <div>
                                     <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">Job Title *</label>
-                                    <input required value={form.title} onChange={set("title")} className={inp} placeholder="e.g. Software Engineering Intern" />
+                                    <input required value={form.title} onChange={set("title")} onBlur={markTouched("title")} className={inp} placeholder="e.g. Software Engineering Intern" />
+                                    {showError("title") && validationErrors.title && <p className="mt-1 text-xs text-red-600">{validationErrors.title}</p>}
                                 </div>
                                 <div>
                                     <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">Company *</label>
-                                    <input required value={form.company} onChange={set("company")} className={inp} placeholder="Your company name" />
+                                    <input required value={form.company} onChange={set("company")} onBlur={markTouched("company")} className={inp} placeholder="Your company name" />
+                                    {showError("company") && validationErrors.company && <p className="mt-1 text-xs text-red-600">{validationErrors.company}</p>}
                                 </div>
                             </div>
 
@@ -236,7 +369,14 @@ export default function PostJobPage() {
                                 </div>
                                 <div>
                                     <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">Duration</label>
-                                    <input value={form.duration} onChange={set("duration")} className={inp} placeholder="e.g. 3 months" />
+                                    <input
+                                        value={form.duration}
+                                        onChange={set("duration")}
+                                        onBlur={markTouched("duration")}
+                                        className={`${inp} ${(showError("duration") && validationErrors.duration) ? "border-red-300 focus:ring-red-500" : ""}`}
+                                        placeholder="e.g. 6 months"
+                                    />
+                                    {showError("duration") && validationErrors.duration && <p className="mt-1 text-xs text-red-600">{validationErrors.duration}</p>}
                                 </div>
                             </div>
 
@@ -246,11 +386,13 @@ export default function PostJobPage() {
                                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                                     <div>
                                         <label className="block text-xs text-gray-400 mb-1">Min</label>
-                                        <input type="number" min="0" value={form.salaryMin} onChange={set("salaryMin")} className={inp} placeholder="25000" />
+                                        <input required type="number" min="0" value={form.salaryMin} onChange={set("salaryMin")} onBlur={markTouched("salaryMin")} className={inp} placeholder="25000" />
+                                        {showError("salaryMin") && validationErrors.salaryMin && <p className="mt-1 text-xs text-red-600">{validationErrors.salaryMin}</p>}
                                     </div>
                                     <div>
                                         <label className="block text-xs text-gray-400 mb-1">Max</label>
-                                        <input type="number" min="0" value={form.salaryMax} onChange={set("salaryMax")} className={inp} placeholder="50000" />
+                                        <input required type="number" min="0" value={form.salaryMax} onChange={set("salaryMax")} onBlur={markTouched("salaryMax")} className={inp} placeholder="50000" />
+                                        {(showError("salaryMax") || showError("salaryMin")) && validationErrors.salaryMax && <p className="mt-1 text-xs text-red-600">{validationErrors.salaryMax}</p>}
                                     </div>
                                     <div>
                                         <label className="block text-xs text-gray-400 mb-1">Currency</label>
@@ -281,22 +423,25 @@ export default function PostJobPage() {
                                 </div>
                                 <div>
                                     <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">Skills (comma-separated)</label>
-                                    <input value={form.skills} onChange={set("skills")} className={inp} placeholder="React, Node.js, MongoDB" />
+                                    <input value={form.skills} onChange={set("skills")} onBlur={markTouched("skills")} className={inp} placeholder="React, Node.js, MongoDB" />
+                                    {showError("skills") && validationErrors.skills && <p className="mt-1 text-xs text-red-600">{validationErrors.skills}</p>}
                                 </div>
                             </div>
 
                             {/* Description */}
                             <div>
                                 <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">Job Description *</label>
-                                <textarea required rows={4} value={form.description} onChange={set("description")}
+                                <textarea required rows={4} value={form.description} onChange={set("description")} onBlur={markTouched("description")}
                                     className={`${inp} resize-none`} placeholder="Describe the role and responsibilities…" />
+                                {showError("description") && validationErrors.description && <p className="mt-1 text-xs text-red-600">{validationErrors.description}</p>}
                             </div>
 
                             {/* Requirements */}
                             <div>
                                 <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">Requirements <span className="text-gray-400 normal-case font-normal">(optional)</span></label>
-                                <textarea rows={3} value={form.requirements} onChange={set("requirements")}
+                                <textarea rows={3} value={form.requirements} onChange={set("requirements")} onBlur={markTouched("requirements")}
                                     className={`${inp} resize-none`} placeholder="List any specific requirements, qualifications…" />
+                                {(showError("requirements") || form.requirements.trim().length > 0) && validationErrors.requirements && <p className="mt-1 text-xs text-red-600">{validationErrors.requirements}</p>}
                             </div>
 
                             <div className="flex gap-3 justify-end pt-2 border-t border-gray-100">
