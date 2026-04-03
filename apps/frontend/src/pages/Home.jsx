@@ -21,44 +21,42 @@ const logoColor = (name) => LOGO_COLORS[(name?.charCodeAt(0) || 0) % LOGO_COLORS
 const hasDeadlinePassed = (deadline) => deadline && new Date(deadline).getTime() < Date.now();
 
 /* ── Job card ────────────────────────────────────────────────────────────── */
-function JobCard({ job, cvData }) {
-function JobCard({ job, index }) {
-function JobCard({ job, onViewApply, applyLabel = "View & Apply", applyDisabled = false }) {
+
+function JobCard({
+  job,
+  onViewApply,
+  applyLabel = "View & Apply",
+  applyDisabled = false,
+  suitabilityScore = null,
+  cvData = null,
+}) {
   const initials = (job.company || "?").split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase();
-  
-  let matchBadge = null;
-  if (cvData && job.skills?.length > 0) {
-      const text = cvData.text.toLowerCase();
-      const missing = job.skills.filter(s => {
-          const skill = s.trim();
-          const escapedSkill = skill.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-          const regex = new RegExp(`(^|\\W)${escapedSkill}(\\W|$)`, 'i');
-          return !regex.test(text);
+
+  let calculatedSuitability = suitabilityScore;
+  if (cvData?.text) {
+    const text = cvData.text.toLowerCase();
+    if (job.skills?.length > 0) {
+      const missing = job.skills.filter((s) => {
+        const skill = s.trim();
+        const escapedSkill = skill.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        const regex = new RegExp(`(^|\\W)${escapedSkill}(\\W|$)`, "i");
+        return !regex.test(text);
       });
       const matched = job.skills.length - missing.length;
-      const matchPercentage = Math.round((matched / job.skills.length) * 100);
-      
-      let badgeClass = "bg-green-100 text-green-700";
-      if (matchPercentage < 50) badgeClass = "bg-red-100 text-red-700";
-      else if (matchPercentage < 80) badgeClass = "bg-orange-100 text-orange-700";
-      
-      matchBadge = (
-          <div className="mt-2 flex items-center justify-between border-t border-gray-100 pt-3">
-              <span className="text-xs font-semibold text-gray-500">CV Suitability:</span>
-              <span className={`text-xs px-2 py-0.5 rounded-md font-bold ${badgeClass}`}>{matchPercentage}% Match</span>
-          </div>
-      );
-  } else if (cvData) {
-      matchBadge = (
-          <div className="mt-2 flex items-center justify-between border-t border-gray-100 pt-3">
-              <span className="text-xs font-semibold text-gray-500">CV Suitability:</span>
-              <span className="text-xs px-2 py-0.5 rounded-md font-bold bg-green-100 text-green-700">100% Match</span>
-          </div>
-      );
+      calculatedSuitability = Math.round((matched / job.skills.length) * 100);
+    } else {
+      calculatedSuitability = 100;
+    }
+  }
+
+  let suitabilityBadgeClass = "bg-green-100 text-green-700";
+  if (typeof calculatedSuitability === "number") {
+    if (calculatedSuitability < 50) suitabilityBadgeClass = "bg-red-100 text-red-700";
+    else if (calculatedSuitability < 80) suitabilityBadgeClass = "bg-orange-100 text-orange-700";
   }
 
   return (
-    <div className={`bg-white border border-gray-200 rounded-2xl p-5 card-lift flex flex-col gap-3 animate-fadeInUp`} style={{ animationDelay: `${index * 50}ms` }}>
+    <div className={`bg-white border border-gray-200 rounded-2xl p-5 card-lift flex flex-col gap-3 animate-fadeInUp`}>
       <div className="flex items-start gap-3">
         <div className={`w-11 h-11 rounded-xl ${logoColor(job.company)} text-white flex items-center justify-center text-sm font-bold flex-shrink-0 shadow-md transition-transform duration-300`}>
           {initials}
@@ -87,6 +85,14 @@ function JobCard({ job, onViewApply, applyLabel = "View & Apply", applyDisabled 
         </div>
       )}
       {job.salaryDisplay && <p className="text-xs text-emerald-700 font-semibold animate-pulse">💰 {job.salaryDisplay}</p>}
+      {typeof calculatedSuitability === "number" && (
+        <div className="mt-1 flex items-center justify-between border-t border-gray-100 pt-3">
+          <span className="text-xs font-semibold text-gray-500">CV Suitability:</span>
+          <span className={`text-xs px-2.5 py-1 rounded-lg font-bold ${suitabilityBadgeClass}`}>
+            {calculatedSuitability}% Match
+          </span>
+        </div>
+      )}
       {job.deadline && <p className="text-xs text-gray-400">Deadline: {new Date(job.deadline).toLocaleDateString()}</p>}
       <button
         type="button"
@@ -103,13 +109,11 @@ function JobCard({ job, onViewApply, applyLabel = "View & Apply", applyDisabled 
   );
 }
 
-function ApplyJobModal({ job, onClose, onApplied }) {
-  const [cvFile, setCvFile] = useState(null);
+function ApplyJobModal({ job, cvData, onClose, onApplied, onUploadCv }) {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
-    setCvFile(null);
     setSubmitting(false);
     setError("");
   }, [job]);
@@ -118,19 +122,15 @@ function ApplyJobModal({ job, onClose, onApplied }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!cvFile) {
-      setError("Please upload your CV as a PDF.");
+    if (!cvData?.filename) {
+      setError("Please upload your CV first.");
       return;
     }
 
     setSubmitting(true);
     setError("");
     try {
-      const formData = new FormData();
-      formData.append("cv", cvFile);
-      await api.post(`/api/jobs/${job._id}/apply`, formData, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
+      await api.post(`/api/jobs/${job._id}/apply`);
       onApplied(job._id);
     } catch (err) {
       setError(err.response?.data?.message || "Failed to submit application.");
@@ -184,23 +184,23 @@ function ApplyJobModal({ job, onClose, onApplied }) {
 
           <form onSubmit={handleSubmit} className="bg-gray-50 border border-gray-200 rounded-2xl p-5 space-y-4">
             <div>
-              <h3 className="text-base font-semibold text-gray-900">Submit your CV</h3>
-              <p className="text-sm text-gray-500 mt-1">Upload a PDF CV and send it directly to the organisation for review.</p>
+              <h3 className="text-base font-semibold text-gray-900">Easy Apply</h3>
+              <p className="text-sm text-gray-500 mt-1">Apply instantly using your already uploaded CV.</p>
             </div>
 
             {job.salaryDisplay && <p className="text-sm text-emerald-700 font-semibold">Salary: {job.salaryDisplay}</p>}
             {job.deadline && <p className="text-sm text-gray-500">Deadline: {new Date(job.deadline).toLocaleDateString()}</p>}
 
-            <label className="block">
-              <span className="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-2">CV PDF</span>
-              <input
-                type="file"
-                accept=".pdf,application/pdf"
-                onChange={(e) => setCvFile(e.target.files?.[0] || null)}
-                className="block w-full text-sm text-gray-600 file:mr-4 file:rounded-xl file:border-0 file:bg-blue-600 file:px-4 file:py-2.5 file:text-sm file:font-semibold file:text-white hover:file:bg-blue-700"
-              />
-              <p className="mt-2 text-xs text-gray-400">Only PDF files up to 5 MB are allowed.</p>
-            </label>
+            {cvData?.filename ? (
+              <div className="rounded-xl border border-green-200 bg-green-50 px-4 py-3">
+                <p className="text-xs font-semibold text-green-700 uppercase tracking-wide">Using CV</p>
+                <p className="text-sm text-green-800 mt-1 break-all">{cvData.filename}</p>
+              </div>
+            ) : (
+              <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+                <p className="text-sm text-amber-800">No CV found. Upload your CV to use Easy Apply.</p>
+              </div>
+            )}
 
             {error && <div className="bg-red-50 border border-red-200 text-red-600 text-sm rounded-xl px-4 py-3">{error}</div>}
 
@@ -208,9 +208,15 @@ function ApplyJobModal({ job, onClose, onApplied }) {
               <button type="button" onClick={onClose} className="flex-1 border border-gray-300 text-gray-700 rounded-xl py-2.5 text-sm font-semibold hover:bg-gray-100 transition-colors">
                 Cancel
               </button>
-              <button type="submit" disabled={submitting} className="flex-1 bg-blue-600 hover:bg-blue-700 text-white rounded-xl py-2.5 text-sm font-semibold transition-colors disabled:opacity-60">
-                {submitting ? "Submitting..." : "Apply Now"}
-              </button>
+              {cvData?.filename ? (
+                <button type="submit" disabled={submitting} className="flex-1 bg-blue-600 hover:bg-blue-700 text-white rounded-xl py-2.5 text-sm font-semibold transition-colors disabled:opacity-60">
+                  {submitting ? "Applying..." : "Easy Apply"}
+                </button>
+              ) : (
+                <button type="button" onClick={onUploadCv} className="flex-1 bg-amber-600 hover:bg-amber-700 text-white rounded-xl py-2.5 text-sm font-semibold transition-colors">
+                  Upload CV
+                </button>
+              )}
             </div>
           </form>
         </div>
@@ -350,7 +356,9 @@ export default function Home() {
       }
   };
   const [selectedJob, setSelectedJob] = useState(null);
+  const [showApplyModal, setShowApplyModal] = useState(false);
   const [appliedJobIds, setAppliedJobIds] = useState([]);
+  const [matchByJobId, setMatchByJobId] = useState({});
 
   useEffect(() => {
     const fetchJobs = async () => {
@@ -369,10 +377,42 @@ export default function Home() {
     return () => clearTimeout(t);
   }, [search, workMode, type]);
 
+  useEffect(() => {
+    const fetchMyApplications = async () => {
+      if (!user || user.globalRole !== "STUDENT") {
+        setMatchByJobId({});
+        return;
+      }
+      try {
+        const res = await api.get("/api/applications/mine");
+        const apps = res.data.applications || [];
+        const nextMatch = {};
+        const nextApplied = [];
+        apps.forEach((app) => {
+          const jobId = app.job?._id || app.jobId?._id || app.job?._id || app.jobId;
+          if (!jobId) return;
+          if (typeof app.matchPercentage === "number") nextMatch[String(jobId)] = app.matchPercentage;
+          nextApplied.push(String(jobId));
+        });
+        setMatchByJobId(nextMatch);
+        setAppliedJobIds(nextApplied);
+      } catch {
+        setMatchByJobId({});
+      }
+    };
+    fetchMyApplications();
+  }, [user]);
+
   /* ── Logged-in view ─────────────────────────────────────────────── */
   if (!authLoading && user) {
     const dashboardRoute = getDashboardRoute(user.globalRole, user.moduleScopedRoles);
     const isStudent = user.globalRole === "STUDENT";
+    const openApplyModal = (job) => {
+      setSelectedJob(job);
+      if (typeof setShowApplyModal === "function") {
+        setShowApplyModal(true);
+      }
+    };
 
     const markApplied = (jobId) => {
       setAppliedJobIds((current) => (current.includes(jobId) ? current : [...current, jobId]));
@@ -430,10 +470,35 @@ export default function Home() {
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-              {jobs.map((job) => <JobCard key={job._id} job={job} cvData={cvData} />)}
+              {jobs.map((job, index) => (
+                <JobCard 
+                  key={job._id} 
+                  job={job} 
+                  suitabilityScore={matchByJobId[String(job._id)]}
+                  cvData={cvData}
+                  applyDisabled={isStudent && (appliedJobIds.includes(String(job._id)) || hasDeadlinePassed(job.deadline))}
+                  applyLabel={isStudent && appliedJobIds.includes(String(job._id)) ? "Already Applied" : "View & Apply"}
+                  onViewApply={openApplyModal}
+                />
+              ))}
             </div>
           )}
         </main>
+        {showApplyModal && selectedJob && (
+          <ApplyJobModal
+            job={selectedJob}
+            cvData={cvData}
+            onClose={() => {
+              setShowApplyModal(false);
+              setSelectedJob(null);
+            }}
+            onApplied={markApplied}
+            onUploadCv={() => {
+              setShowApplyModal(false);
+              setShowCvModal(true);
+            }}
+          />
+        )}
         {/* CV Upload Modal */}
         {showCvModal && (
             <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">

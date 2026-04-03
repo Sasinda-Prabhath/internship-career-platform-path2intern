@@ -245,14 +245,19 @@ export default function ReviewApplicationsPage() {
                                         <div className="flex items-center gap-2">
                                             <button
                                                 type="button"
-                                                onClick={() => window.open(`${api.defaults.baseURL}${application.cvUrl}`, "_blank")}
+                                                onClick={() => window.open(`${api.defaults.baseURL}/uploads/resumes/${application.resumeUrl}`, "_blank")}
                                                 className="inline-flex items-center gap-2 border border-blue-200 bg-white hover:bg-blue-50 text-blue-700 text-sm font-semibold px-4 py-2.5 rounded-xl transition-colors"
                                             >
                                                 View CV
                                             </button>
                                             <button
                                                 type="button"
-                                                onClick={() => window.open(`${api.defaults.baseURL}${application.cvDownloadUrl}`, "_blank")}
+                                                onClick={() => {
+                                                  const link = document.createElement('a');
+                                                  link.href = `${api.defaults.baseURL}/uploads/resumes/${application.resumeUrl}`;
+                                                  link.download = `${application.resumeUrl}`;
+                                                  link.click();
+                                                }}
                                                 className="group inline-flex items-center gap-2.5 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 active:scale-95 text-white text-sm font-semibold px-5 py-2.5 rounded-xl shadow-sm shadow-blue-200 transition-all duration-150"
                                             >
                                                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4 transition-transform group-hover:translate-y-0.5">

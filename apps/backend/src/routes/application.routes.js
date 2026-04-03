@@ -11,8 +11,6 @@ import {
 } from "../controllers/application.controller.js";
 import { requireAuth, requireRole } from "../middleware/auth.middleware.js";
 import { uploadResume } from "../middleware/upload.middleware.js";
-import { getMyApplications } from "../controllers/application.controller.js";
-import { requireAuth, requireRole } from "../middleware/auth.middleware.js";
 
 const router = Router();
 

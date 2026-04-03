@@ -10,9 +10,11 @@ import jobRoutes from "./routes/job.routes.js";
 import applicationRoutes from "./routes/application.routes.js";
 import orgRoutes from "./routes/org.routes.js";
 import contactRoutes from "./routes/contact.routes.js";
-import applicationRoutes from "./routes/application.routes.js";
 import advisorRoutes from "./routes/advisor.routes.js";
 import simulationRoutes from "./routes/simulation.routes.js";
+import portfolioRoutes from "./routes/portfolio.routes.js";
+import aiRoutes from "./routes/ai.routes.js";
+import resumeAiRoutes from "./routes/resumeAi.routes.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -23,6 +25,8 @@ const allowedOrigins = [
   "http://localhost:5173",
   "http://127.0.0.1:5173",
   "http://localhost:3000",
+  "http://localhost:5175",
+  "http://127.0.0.1:5175",
 ];
 
 app.use(cors({
@@ -49,8 +53,10 @@ app.use("/api/jobs", jobRoutes);
 app.use("/api/applications", applicationRoutes);
 app.use("/api/org", orgRoutes);
 app.use("/api/contact", contactRoutes);
-app.use("/api/applications", applicationRoutes);
 app.use("/api/advisor", advisorRoutes);
 app.use("/api/simulations", simulationRoutes);
+app.use("/api/portfolio", portfolioRoutes);
+app.use("/api/ai", aiRoutes);
+app.use("/api/resume", resumeAiRoutes);
 
 export default app;

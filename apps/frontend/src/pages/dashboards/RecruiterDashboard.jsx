@@ -205,12 +205,15 @@ export default function OrgDashboard() {
                                 <OrgActionCard
                                     to="/org/review-applications?filter=shortlisted"
                                     icon="👥"
-                                    title="Shortlish Candidtes"
-                                    description="See all student applications for your listings."
+                                    title="Shortlisted candidates"
+                                    description="See applications you have marked as shortlisted."
+                                    accent="amber"
+                                />
+                                <OrgActionCard
                                     to="/org/job-listings"
-                                    icon="👥"
-                                    title="Review Applications"
-                                    description="Click a job listing then 'Applicants' to review submissions."
+                                    icon="📋"
+                                    title="Review applications"
+                                    description="Open a job listing, then use Applicants to review submissions."
                                     accent="amber"
                                 />
                                 <OrgActionCard
@@ -219,13 +222,6 @@ export default function OrgDashboard() {
                                     title="Review Application"
                                     description="Mark promising applicants and update their status."
                                     accent="purple"
-                                />
-                                <OrgActionCard
-                                    to="/simulation"
-                                    icon="🎯"
-                                    title="Interview Simulation"
-                                    description="Practice with AI-generated interview questions for your modules."
-                                    accent="blue"
                                 />
                             </div>
                         </div>

@@ -47,6 +47,8 @@ import CVGateway from "./pages/dashboards/CVGateway";
 import ReviewApplicationsPage from "./pages/org/ReviewApplicationsPage";
 import JobListingsPage from "./pages/org/JobListingsPage";
 import ManageApplicantsPage from "./pages/org/ManageApplicantsPage";
+import PortfolioEditorPage from "./pages/PortfolioEditorPage";
+import PublicPortfolioPage from "./pages/PublicPortfolioPage";
 
 /** Wraps a page with auth guard + left sidebar */
 function DashboardRoute({ allowedRoles, children }) {
@@ -77,6 +79,9 @@ function App() {
 
           {/* Job detail — public */}
           <Route path="/job/:jobId" element={<JobDetailPage />} />
+
+          {/* Public student portfolio */}
+          <Route path="/u/:username" element={<PublicPortfolioPage />} />
 
           {/* Profile — auth only, no sidebar */}
           <Route
@@ -115,10 +120,11 @@ function App() {
           <Route path="/module/question-bank" element={<DashboardRoute allowedRoles={["MODULE_MANAGER", "MODULE_OPERATOR"]}><QuestionBankPage /></DashboardRoute>} />
           <Route path="/quiz" element={<DashboardRoute allowedRoles={["STUDENT"]}><QuizPage /></DashboardRoute>} />
           <Route path="/resume-builder" element={<DashboardRoute allowedRoles={["STUDENT"]}><ResumePage /></DashboardRoute>} />
+          <Route path="/dashboard/portfolio" element={<DashboardRoute allowedRoles={["STUDENT"]}><PortfolioEditorPage /></DashboardRoute>} />
+          <Route path="/portfolio-builder" element={<DashboardRoute allowedRoles={["STUDENT"]}><PortfolioEditorPage /></DashboardRoute>} />
           <Route path="/student/my-applications" element={<DashboardRoute allowedRoles={["STUDENT"]}><MyApplicationsPage /></DashboardRoute>} />
           <Route path="/org/post-job" element={<DashboardRoute allowedRoles={["ORGANIZATION", "RECRUITER"]}><PostJobPage /></DashboardRoute>} />
           <Route path="/org/review-applications" element={<DashboardRoute allowedRoles={["ORGANIZATION", "RECRUITER"]}><ReviewApplicationsPage /></DashboardRoute>} />
-          <Route path="/simulation" element={<DashboardRoute allowedRoles={["STUDENT"]}><SimulationRunner /></DashboardRoute>} />
           <Route path="/org/post-job" element={<DashboardRoute allowedRoles={["ORGANIZATION", "RECRUITER"]}><PostJobPage /></DashboardRoute>} />
           <Route path="/org/edit-job/:jobId" element={<DashboardRoute allowedRoles={["ORGANIZATION", "RECRUITER"]}><PostJobPage /></DashboardRoute>} />
           <Route path="/org/job-listings" element={<DashboardRoute allowedRoles={["ORGANIZATION", "RECRUITER"]}><JobListingsPage /></DashboardRoute>} />

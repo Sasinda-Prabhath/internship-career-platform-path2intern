@@ -32,12 +32,6 @@ const fileFilter = (_req, file, cb) => {
     }
 };
 
-export const uploadOrgDoc = multer({
-    storage,
-    fileFilter,
-    limits: { fileSize: 5 * 1024 * 1024 }, // 5 MB max
-}).single("document");
-
 const resumeDir = path.join(__dirname, "../../uploads/resumes");
 if (!fs.existsSync(resumeDir)) fs.mkdirSync(resumeDir, { recursive: true });
 

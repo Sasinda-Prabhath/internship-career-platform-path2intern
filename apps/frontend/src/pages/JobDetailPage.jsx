@@ -37,7 +37,7 @@ export default function JobDetailPage() {
         const fetchJob = async () => {
             try {
                 const res = await api.get(`/api/jobs/${jobId}`);
-                setJob(res.data);
+                setJob(res.data?.job || res.data);
             } catch (e) {
                 setError("Job not found");
             } finally {
@@ -116,6 +116,8 @@ export default function JobDetailPage() {
 
     const isStudent = user?.globalRole === "STUDENT";
     const hasApplied = !!application;
+    const descriptionLines = String(job.description ?? "").split("\n");
+    const requirementLines = String(job.requirements ?? "").split("\n");
 
     return (
         <div className="min-h-screen bg-gray-50">
@@ -173,7 +175,7 @@ export default function JobDetailPage() {
                         <div className="bg-white border border-gray-200 rounded-2xl p-6">
                             <h2 className="text-lg font-bold text-gray-900 mb-4">Job Description</h2>
                             <div className="prose prose-sm max-w-none text-gray-700">
-                                {job.description.split('\n').map((line, i) => (
+                                {descriptionLines.map((line, i) => (
                                     <p key={i} className="mb-3">{line}</p>
                                 ))}
                             </div>
@@ -184,7 +186,7 @@ export default function JobDetailPage() {
                             <div className="bg-white border border-gray-200 rounded-2xl p-6">
                                 <h2 className="text-lg font-bold text-gray-900 mb-4">Requirements</h2>
                                 <div className="prose prose-sm max-w-none text-gray-700">
-                                    {job.requirements.split('\n').map((line, i) => (
+                                    {requirementLines.map((line, i) => (
                                         <p key={i} className="mb-3">{line}</p>
                                     ))}
                                 </div>

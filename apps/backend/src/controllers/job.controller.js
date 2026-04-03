@@ -24,6 +24,14 @@ const resolveUploadPath = (fileUrl) => path.join(__dirname, "../../", fileUrl.re
 
 const buildApplicationSummary = (application) => ({
     ...application,
+    student: application.student || application.applicant || null,
+    status: (
+        application.status === "Shortlisted" ? "shortlisted" :
+        application.status === "Rejected" ? "rejected" :
+        "submitted"
+    ),
+    cvUrl: application.cvUrl || application.resumeUrl || "",
+    cvOriginalName: application.cvOriginalName || path.basename(application.resumeUrl || "") || "resume.pdf",
     cvDownloadUrl: `/api/jobs/applications/${application._id}/download-cv`,
 });
 
@@ -94,10 +102,11 @@ export const getMyJobs = async (req, res) => {
         const jobs = await Job.find({ postedBy: req.user.userId })
             .sort({ createdAt: -1 })
             .lean();
+        const jobIds = jobs.map((job) => job._id);
         const applicationsByJob = await Application.aggregate([
             {
                 $match: {
-                    organization: jobObjectId(req.user.userId),
+                    job: { $in: jobIds },
                 },
             },
             {
@@ -237,8 +246,16 @@ export const applyToJob = async (req, res) => {
         const job = await Job.findOne({ _id: req.params.id, status: "active" }).lean();
         if (!job) return res.status(404).json({ message: "Job not found" });
 
-        if (!req.file) {
-            return res.status(400).json({ message: "Please upload your CV as a PDF" });
+        // Easy apply: use newly uploaded file when present, otherwise fall back to student's saved CV.
+        const student = await User.findById(req.user.userId).select("cvFilename").lean();
+        const resolvedResumeUrl = req.file
+            ? `/uploads/student-cvs/${req.file.filename}`
+            : student?.cvFilename
+                ? `/uploads/resumes/${student.cvFilename}`
+                : null;
+
+        if (!resolvedResumeUrl) {
+            return res.status(400).json({ message: "Please upload your CV before applying" });
         }
 
         if (String(job.postedBy) === req.user.userId) {
@@ -249,17 +266,16 @@ export const applyToJob = async (req, res) => {
             return res.status(400).json({ message: "This application deadline has passed" });
         }
 
-        const existing = await Application.findOne({ job: job._id, student: req.user.userId }).lean();
+        const existing = await Application.findOne({ job: job._id, applicant: req.user.userId }).lean();
         if (existing) {
             return res.status(409).json({ message: "You have already applied to this job" });
         }
 
         const application = await Application.create({
             job: job._id,
-            student: req.user.userId,
-            organization: job.postedBy,
-            cvUrl: `/uploads/student-cvs/${req.file.filename}`,
-            cvOriginalName: req.file.originalname,
+            applicant: req.user.userId,
+            status: "Pending",
+            resumeUrl: resolvedResumeUrl,
         });
 
         res.status(201).json({
@@ -277,12 +293,11 @@ export const applyToJob = async (req, res) => {
 // GET /api/jobs/applications/mine  — student only
 export const getMyApplications = async (req, res) => {
     try {
-        const applications = await Application.find({ student: req.user.userId })
+        const applications = await Application.find({ applicant: req.user.userId })
             .populate("job", "title company location type workMode deadline status")
-            .populate("organization", "name organizationName")
             .sort({ createdAt: -1 })
             .lean();
-        res.json({ total: applications.length, applications });
+        res.json({ total: applications.length, applications: applications.map(buildApplicationSummary) });
     } catch (e) {
         res.status(500).json({ message: e.message });
     }
@@ -291,8 +306,10 @@ export const getMyApplications = async (req, res) => {
 // GET /api/jobs/applications/received  — organization only
 export const getReceivedApplications = async (req, res) => {
     try {
-        const applications = await Application.find({ organization: req.user.userId })
-            .populate("student", "name email")
+        const jobs = await Job.find({ postedBy: req.user.userId }).select("_id").lean();
+        const jobIds = jobs.map((job) => job._id);
+        const applications = await Application.find({ job: { $in: jobIds } })
+            .populate("applicant", "name email")
             .populate("job", "title company location type workMode deadline")
             .sort({ createdAt: -1 })
             .lean();
@@ -311,19 +328,26 @@ export const updateApplicationStatus = async (req, res) => {
         if (!allowedApplicationStatuses.includes(status)) {
             return res.status(400).json({ message: "Invalid application status" });
         }
+        const dbStatus =
+            status === "shortlisted" ? "Shortlisted" :
+            status === "rejected" ? "Rejected" :
+            "Pending";
 
-        const application = await Application.findOne({
-            _id: req.params.applicationId,
-            organization: req.user.userId,
-        })
-            .populate("student", "name email")
+        const application = await Application.findById(req.params.applicationId)
+            .populate("applicant", "name email")
             .populate("job", "title company location type workMode deadline");
 
         if (!application) {
             return res.status(404).json({ message: "Application not found" });
         }
+        if (!application.job || String(application.job.postedBy || "") !== String(req.user.userId)) {
+            const ownerJob = await Job.findById(application.job?._id || application.job).select("postedBy").lean();
+            if (!ownerJob || String(ownerJob.postedBy) !== String(req.user.userId)) {
+                return res.status(404).json({ message: "Application not found" });
+            }
+        }
 
-        application.status = status;
+        application.status = dbStatus;
         await application.save();
 
         res.json({
@@ -338,20 +362,26 @@ export const updateApplicationStatus = async (req, res) => {
 // GET /api/jobs/applications/:applicationId/download-cv  — organization only
 export const downloadApplicationCv = async (req, res) => {
     try {
-        const application = await Application.findOne({
-            _id: req.params.applicationId,
-            organization: req.user.userId,
-        }).lean();
+        const application = await Application.findById(req.params.applicationId).lean();
         if (!application) {
             return res.status(404).json({ message: "Application not found" });
         }
+        const ownerJob = await Job.findById(application.job).select("postedBy").lean();
+        if (!ownerJob || String(ownerJob.postedBy) !== String(req.user.userId)) {
+            return res.status(404).json({ message: "Application not found" });
+        }
 
-        const absolutePath = resolveUploadPath(application.cvUrl);
+        const absolutePath = resolveUploadPath(application.cvUrl || application.resumeUrl);
         if (!fs.existsSync(absolutePath)) {
             return res.status(404).json({ message: "CV file not found" });
         }
 
-        res.download(absolutePath, application.cvOriginalName);
+        res.download(absolutePath, application.cvOriginalName || path.basename(application.resumeUrl || absolutePath));
+    } catch (e) {
+        res.status(500).json({ message: e.message });
+    }
+};
+
 // GET /api/jobs/:id/applicants  — org only, their own job
 export const getJobApplicants = async (req, res) => {
     try {
@@ -360,9 +390,9 @@ export const getJobApplicants = async (req, res) => {
         if (job.postedBy.toString() !== req.user.userId)
             return res.status(403).json({ message: "Not your job post" });
 
-        const applications = await Application.find({ jobId: job._id })
-            .populate("studentId", "name email")
-            .sort({ appliedAt: -1 })
+        const applications = await Application.find({ job: job._id })
+            .populate("applicant", "name email")
+            .sort({ createdAt: -1 })
             .lean();
 
         res.json({ job: { _id: job._id, title: job.title, company: job.company }, total: applications.length, applications });
@@ -437,6 +467,11 @@ export const downloadJobsPDF = async (req, res) => {
 
         // Finalize PDF
         doc.end();
+    } catch (e) {
+        res.status(500).json({ message: e.message });
+    }
+};
+
 // PATCH /api/jobs/:id/applicants/:appId  — org only
 export const updateApplicantStatus = async (req, res) => {
     try {
@@ -450,10 +485,10 @@ export const updateApplicantStatus = async (req, res) => {
             return res.status(400).json({ message: "Invalid status. Use Pending, Accepted, or Rejected" });
 
         const app = await Application.findOneAndUpdate(
-            { _id: req.params.appId, jobId: job._id },
+            { _id: req.params.appId, job: job._id },
             { status },
             { new: true }
-        ).populate("studentId", "name email");
+        ).populate("applicant", "name email");
 
         if (!app) return res.status(404).json({ message: "Application not found" });
         res.json({ message: "Status updated", application: app });

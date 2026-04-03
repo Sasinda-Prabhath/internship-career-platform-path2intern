@@ -45,6 +45,8 @@ const DarkActionCard = ({ to, icon, title, description, disabled }) => (
 export default function StudentDashboard() {
     const { user, updateUser } = useAuth();
     const [stats, setStats] = useState({ sent: 0, shortlisted: 0 });
+    const [jobs, setJobs] = useState([]);
+    const [jobsLoading, setJobsLoading] = useState(true);
 
     const handleDeleteCv = async () => {
         if (!window.confirm("Are you sure you want to delete your CV?")) return;
@@ -70,6 +72,21 @@ export default function StudentDashboard() {
             }
         };
         fetchStats();
+    }, []);
+
+    useEffect(() => {
+        const fetchLatestJobs = async () => {
+            setJobsLoading(true);
+            try {
+                const res = await api.get("/api/jobs");
+                setJobs(res.data.jobs || []);
+            } catch (err) {
+                setJobs([]);
+            } finally {
+                setJobsLoading(false);
+            }
+        };
+        fetchLatestJobs();
     }, []);
 
     return (
