@@ -173,7 +173,7 @@ export default function QuestionBankPage() {
                                             <span className={`text-xs font-medium px-2 py-0.5 rounded-full border ${c.badge}`}>{q.module}</span>
                                             {q.submittedBy?.name && <span className="text-xs text-slate-500">by {q.submittedBy.name}</span>}
                                         </div>
-                                        <p className="text-sm font-medium text-white mb-3">{q.questionText}</p>
+                                        <p className="text-sm font-medium text-black mb-3">{q.questionText}</p>
                                         <div className="grid grid-cols-2 gap-2">
                                             {q.options?.map((opt) => (
                                                 <div key={opt.label} className={`flex items-center gap-2 text-xs px-3 py-1.5 rounded-lg border ${opt.label === q.correctOption ? "bg-green-500/10 text-green-400 border-green-500/20" : "bg-slate-800 text-slate-400 border-slate-700"}`}>
