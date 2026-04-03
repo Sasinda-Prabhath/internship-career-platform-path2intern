@@ -33,7 +33,7 @@ function QuestionCard({ question, onReviewed }) {
                 <span className="text-xs text-slate-600 ml-auto">{new Date(question.createdAt).toLocaleDateString()}</span>
             </div>
 
-            <p className="text-sm font-semibold text-white mb-4 leading-relaxed">{question.questionText}</p>
+            <p className="text-sm font-semibold text-black mb-4 leading-relaxed">{question.questionText}</p>
 
             {/* Options */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-4">

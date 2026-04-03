@@ -23,14 +23,14 @@ export default function QuizPage() {
     const { user } = useAuth();
     const [selectedModule, setSelectedModule] = useState(null);
     const [questions, setQuestions] = useState([]);
+    const [fullQuestions, setFullQuestions] = useState([]); // For review with answers/explanations
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
     const [quizStarted, setQuizStarted] = useState(false);
     const [currentIndex, setCurrentIndex] = useState(0);
     const [chosen, setChosen] = useState(null);
-    const [revealed, setRevealed] = useState(false);
-    const [score, setScore] = useState(0);
     const [finished, setFinished] = useState(false);
+    const [score, setScore] = useState(0);
     const [answers, setAnswers] = useState([]);
 
     const fetchQuestions = async (code) => {
@@ -42,32 +42,62 @@ export default function QuizPage() {
         finally { setLoading(false); }
     };
 
+    // Fetch full questions WITH answers/explanations for review after quiz
+    const fetchFullQuestions = async (code) => {
+        try {
+            const res = await api.get(`/api/module/questions/${code}/approved?withAnswers=true`);
+            // Map them to match the randomized order of the quiz
+            const fullMap = {};
+            (res.data.questions || []).forEach(q => { fullMap[q._id] = q; });
+            const reorderedFull = questions.map(q => fullMap[q._id] || q);
+            setFullQuestions(reorderedFull);
+        } catch (err) {
+            console.error("Failed to fetch full questions for review:", err);
+        }
+    };
+
     const startQuiz = (code) => {
         setSelectedModule(code); setQuizStarted(false); setFinished(false);
-        setScore(0); setAnswers([]); setCurrentIndex(0); setChosen(null); setRevealed(false);
+        setScore(0); setAnswers([]); setCurrentIndex(0); setChosen(null);
         fetchQuestions(code);
     };
 
     const beginQuiz = () => {
         if (questions.length === 0) return;
-        setQuizStarted(true); setCurrentIndex(0); setChosen(null); setRevealed(false); setScore(0); setAnswers([]); setFinished(false);
+        setQuizStarted(true); setCurrentIndex(0); setChosen(null); setScore(0); setAnswers([]); setFinished(false);
     };
-
-    const checkAnswer = () => { if (!chosen) return; setRevealed(true); };
 
     const next = () => {
-        const q = questions[currentIndex];
-        const isCorrect = chosen === q.correctOption;
-        const newAnswers = [...answers, { chosen, correct: q.correctOption, isCorrect }];
+        if (!chosen) return;
+        const newAnswers = [...answers, { chosen }];
         setAnswers(newAnswers);
-        if (isCorrect) setScore((s) => s + 1);
-        if (currentIndex + 1 >= questions.length) { setFinished(true); }
-        else { setCurrentIndex((i) => i + 1); setChosen(null); setRevealed(false); }
+        if (currentIndex + 1 >= questions.length) { 
+            setFinished(true);
+            // Fetch full questions for review
+            fetchFullQuestions(selectedModule);
+        }
+        else { setCurrentIndex((i) => i + 1); setChosen(null); }
     };
 
+    // Recalculate score and answers with full question data
+    useEffect(() => {
+        if (finished && fullQuestions.length > 0 && answers.length > 0) {
+            let correctCount = 0;
+            const updatedAnswers = answers.map((ans, idx) => {
+                const q = fullQuestions[idx];
+                const isCorrect = ans.chosen === q.correctOption;
+                if (isCorrect) correctCount++;
+                return { chosen: ans.chosen, correct: q.correctOption, isCorrect };
+            });
+            setAnswers(updatedAnswers);
+            setScore(correctCount);
+        }
+    }, [finished, fullQuestions]);
+
     const restart = () => {
-        setQuizStarted(false); setFinished(false); setChosen(null); setRevealed(false);
+        setQuizStarted(false); setFinished(false); setChosen(null);
         setScore(0); setAnswers([]); setCurrentIndex(0);
+        setFullQuestions([]);
         setQuestions((qs) => [...qs].sort(() => Math.random() - 0.5));
     };
 
@@ -195,25 +225,14 @@ export default function QuizPage() {
                                     let cls = "border-gray-200 bg-white text-gray-700 hover:border-gray-300 hover:bg-gray-50";
                                     let labelCls = "bg-gray-100 text-gray-600";
 
-                                    if (revealed) {
-                                        if (opt.label === q.correctOption) {
-                                            cls = "border-emerald-300 bg-emerald-50 text-emerald-800";
-                                            labelCls = "bg-emerald-500 text-white";
-                                        } else if (opt.label === chosen && chosen !== q.correctOption) {
-                                            cls = "border-red-300 bg-red-50 text-red-800";
-                                            labelCls = "bg-red-500 text-white";
-                                        } else {
-                                            cls = "border-gray-100 bg-gray-50 text-gray-400";
-                                            labelCls = "bg-gray-100 text-gray-400";
-                                        }
-                                    } else if (chosen === opt.label) {
+                                    if (chosen === opt.label) {
                                         cls = `border-2 ${c.border} ${c.chosenBg}`;
                                         labelCls = `${c.iconBg} text-white`;
                                     }
 
                                     return (
-                                        <button key={opt.label} disabled={revealed} onClick={() => setChosen(opt.label)}
-                                            className={`w-full text-left px-4 py-3 rounded-xl text-sm font-medium transition-all flex items-center gap-3 border ${cls} ${revealed ? "cursor-default" : "cursor-pointer"}`}>
+                                        <button key={opt.label} disabled={false} onClick={() => setChosen(opt.label)}
+                                            className={`w-full text-left px-4 py-3 rounded-xl text-sm font-medium transition-all flex items-center gap-3 border ${cls} cursor-pointer`}>
                                             <span className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold flex-shrink-0 transition-colors ${labelCls}`}>
                                                 {opt.label}
                                             </span>
@@ -223,8 +242,8 @@ export default function QuizPage() {
                                 })}
                             </div>
 
-                            {/* Explanation */}
-                            {revealed && q.explanation && (
+                            {/* Explanation - shown when answer is selected */}
+                            {chosen && q.explanation && (
                                 <div className="mt-4 bg-blue-50 border border-blue-200 rounded-xl px-4 py-3 text-sm text-blue-800">
                                     <span className="font-semibold">💡 Explanation: </span>{q.explanation}
                                 </div>
@@ -233,49 +252,113 @@ export default function QuizPage() {
 
                         {/* Action bar */}
                         <div className="flex justify-end gap-3">
-                            {!revealed ? (
-                                <button disabled={!chosen} onClick={checkAnswer}
-                                    className={`px-6 py-2.5 rounded-xl text-sm font-semibold transition-colors ${chosen
-                                            ? `${c.btn} text-white shadow-sm`
-                                            : "bg-gray-100 text-gray-400 cursor-not-allowed"
-                                        }`}>
-                                    Check Answer
-                                </button>
-                            ) : (
-                                <button onClick={next}
-                                    className={`${c.btn} text-white px-6 py-2.5 rounded-xl text-sm font-semibold shadow-sm transition-colors`}>
-                                    {currentIndex + 1 < questions.length ? "Next Question →" : "Finish Quiz"}
-                                </button>
-                            )}
+                            <button disabled={!chosen} onClick={next}
+                                className={`px-6 py-2.5 rounded-xl text-sm font-semibold transition-colors ${chosen
+                                        ? `${c.btn} text-white shadow-sm`
+                                        : "bg-gray-100 text-gray-400 cursor-not-allowed"
+                                    }`}>
+                                {currentIndex + 1 < questions.length ? "Next Question →" : "Finish Quiz"}
+                            </button>
                         </div>
                     </div>
                 )}
 
                 {/* ── Finished ──────────────────────────────────────────── */}
                 {finished && (
-                    <div className="max-w-sm mx-auto text-center">
-                        <div className={`bg-white border-2 ${c.border} rounded-2xl p-8 shadow-sm`}>
-                            <div className="text-5xl mb-4">{emoji(score, questions.length)}</div>
-                            <h2 className="text-2xl font-bold text-gray-900 mb-1">Quiz Complete!</h2>
-                            <p className={`text-4xl font-bold ${c.accent} my-3`}>{score} <span className="text-xl text-gray-400">/ {questions.length}</span></p>
-                            <p className="text-sm text-gray-500 mb-6">
-                                {score === questions.length ? "Perfect score! 🎯" : score >= questions.length * 0.7 ? "Great job! Keep it up." : score >= questions.length * 0.5 ? "Good effort — keep practising!" : "Review this module and try again."}
-                            </p>
+                    <div className="space-y-6">
+                        {/* Score Summary */}
+                        <div className="max-w-sm mx-auto text-center">
+                            <div className={`bg-white border-2 ${c.border} rounded-2xl p-8 shadow-sm`}>
+                                <div className="text-5xl mb-4">{emoji(score, questions.length)}</div>
+                                <h2 className="text-2xl font-bold text-gray-900 mb-1">Quiz Complete!</h2>
+                                <p className={`text-4xl font-bold ${c.accent} my-3`}>{score} <span className="text-xl text-gray-400">/ {questions.length}</span></p>
+                                <p className="text-sm text-gray-500 mb-6">
+                                    {score === questions.length ? "Perfect score! 🎯" : score >= questions.length * 0.7 ? "Great job! Keep it up." : score >= questions.length * 0.5 ? "Good effort — keep practising!" : "Review this module and try again."}
+                                </p>
 
-                            {/* Score bar */}
-                            <div className="w-full bg-gray-100 rounded-full h-2 mb-6">
-                                <div className={`${c.bar} h-2 rounded-full transition-all`} style={{ width: `${(score / questions.length) * 100}%` }} />
+                                {/* Score bar */}
+                                <div className="w-full bg-gray-100 rounded-full h-2 mb-6">
+                                    <div className={`${c.bar} h-2 rounded-full transition-all`} style={{ width: `${(score / questions.length) * 100}%` }} />
+                                </div>
+
+                                <div className="flex gap-3 justify-center">
+                                    <button onClick={restart}
+                                        className={`${c.btn} text-white px-5 py-2.5 rounded-xl text-sm font-semibold shadow-sm`}>
+                                        Retake Quiz
+                                    </button>
+                                    <button onClick={() => setSelectedModule(null)}
+                                        className="border border-gray-200 text-gray-600 px-5 py-2.5 rounded-xl text-sm font-medium hover:bg-gray-50 transition-colors">
+                                        Other Module
+                                    </button>
+                                </div>
                             </div>
+                        </div>
 
-                            <div className="flex gap-3 justify-center">
-                                <button onClick={restart}
-                                    className={`${c.btn} text-white px-5 py-2.5 rounded-xl text-sm font-semibold shadow-sm`}>
-                                    Retake Quiz
-                                </button>
-                                <button onClick={() => setSelectedModule(null)}
-                                    className="border border-gray-200 text-gray-600 px-5 py-2.5 rounded-xl text-sm font-medium hover:bg-gray-50 transition-colors">
-                                    Other Module
-                                </button>
+                        {/* Review all answers */}
+                        <div>
+                            <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-4">Review Your Answers</h3>
+                            <div className="space-y-5">
+                                {(fullQuestions.length > 0 ? fullQuestions : questions).map((q, idx) => {
+                                    const ans = answers[idx];
+                                    const isCorrect = ans?.isCorrect;
+                                    return (
+                                        <div key={q._id} className="bg-white border border-gray-200 rounded-2xl p-6">
+                                            {/* Question header */}
+                                            <div className="flex items-start gap-3 mb-4">
+                                                <span className={`flex-shrink-0 w-8 h-8 rounded-lg ${c.iconBg} text-white flex items-center justify-center text-xs font-bold`}>{idx + 1}</span>
+                                                <div className="flex-1 min-w-0">
+                                                    <p className="text-sm font-semibold text-gray-900">{q.questionText}</p>
+                                                </div>
+                                                <span className={`flex-shrink-0 text-2xl ${isCorrect ? "text-emerald-600" : "text-red-600"}`}>
+                                                    {isCorrect ? "✓" : "✕"}
+                                                </span>
+                                            </div>
+
+                                            {/* Answer options */}
+                                            <div className="space-y-2 ml-11">
+                                                {q.options.map((opt) => {
+                                                    const isStudentAnswer = opt.label === ans?.chosen;
+                                                    const isCorrectAnswer = opt.label === q.correctOption;
+                                                    
+                                                    let containerClass = "bg-white border border-gray-200";
+                                                    let textClass = "text-gray-700";
+                                                    let labelClass = "bg-gray-100 text-gray-600";
+
+                                                    if (isCorrectAnswer) {
+                                                        containerClass = "bg-emerald-50 border-2 border-emerald-400";
+                                                        textClass = "text-emerald-900 font-medium";
+                                                        labelClass = "bg-emerald-500 text-white font-bold";
+                                                    } else if (isStudentAnswer && !isCorrect) {
+                                                        containerClass = "bg-red-50 border-2 border-red-400";
+                                                        textClass = "text-red-900 font-medium";
+                                                        labelClass = "bg-red-500 text-white font-bold";
+                                                    }
+
+                                                    return (
+                                                        <div key={opt.label} className={`${containerClass} rounded-xl px-4 py-3 text-sm flex items-center gap-3`}>
+                                                            <span className={`w-7 h-7 rounded flex items-center justify-center text-xs font-bold flex-shrink-0 ${labelClass}`}>
+                                                                {opt.label}
+                                                            </span>
+                                                            <span className={textClass}>{opt.text}</span>
+                                                            <div className="ml-auto flex gap-2">
+                                                                {isCorrectAnswer && <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-700">✓ CORRECT</span>}
+                                                                {isStudentAnswer && !isCorrect && <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-red-100 text-red-700">YOU SELECTED</span>}
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+
+                                            {/* Explanation - Always show */}
+                                            <div className="mt-4 ml-11 bg-blue-50 border border-blue-200 rounded-xl px-4 py-3">
+                                                <p className="text-sm">
+                                                    <span className="font-bold text-blue-900">💡 Explanation: </span>
+                                                    <span className="text-blue-800">{q.explanation || "No explanation provided."}</span>
+                                                </p>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
                             </div>
                         </div>
                     </div>

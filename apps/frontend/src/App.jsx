@@ -1,4 +1,6 @@
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 import Navbar from "./components/Navbar";
 import ProtectedRoute from "./components/ProtectedRoute";
 import DashboardLayout from "./components/DashboardLayout";
@@ -9,6 +11,7 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Profile from "./pages/Profile";
 import AcceptInvitePage from "./pages/AcceptInvitePage";
+import JobDetailPage from "./pages/JobDetailPage";
 
 // Role dashboards
 import SystemAdminDashboard from "./pages/dashboards/SystemAdminDashboard";
@@ -27,6 +30,7 @@ import QuestionBankPage from "./pages/module/QuestionBankPage";
 // Student pages
 import QuizPage from "./pages/quiz/QuizPage";
 import ResumePage from "./pages/ResumePage";
+import MyApplicationsPage from "./pages/student/MyApplicationsPage";
 
 // University Admin pages
 import StaffManagementPage from "./pages/staff/StaffManagementPage";
@@ -35,6 +39,9 @@ import ContactsPage from "./pages/admin/ContactsPage";
 
 // Organisation pages
 import PostJobPage from "./pages/org/PostJobPage";
+import ReviewApplicationsPage from "./pages/org/ReviewApplicationsPage";
+import JobListingsPage from "./pages/org/JobListingsPage";
+import ManageApplicantsPage from "./pages/org/ManageApplicantsPage";
 
 /** Wraps a page with auth guard + left sidebar */
 function DashboardRoute({ allowedRoles, children }) {
@@ -51,6 +58,7 @@ function App() {
   return (
     <Router>
       <div className="min-h-screen bg-[#0a0f1e] font-sans text-gray-900 flex flex-col">
+        <ToastContainer />
 
         <Routes>
           {/* ── Public ─────────────────────────────────────────── */}
@@ -60,6 +68,9 @@ function App() {
 
           {/* Staff invite acceptance — public, no sidebar */}
           <Route path="/accept-invite" element={<AcceptInvitePage />} />
+
+          {/* Job detail — public */}
+          <Route path="/job/:jobId" element={<JobDetailPage />} />
 
           {/* Profile — auth only, no sidebar */}
           <Route
@@ -97,7 +108,14 @@ function App() {
           <Route path="/module/question-bank" element={<DashboardRoute allowedRoles={["MODULE_MANAGER", "MODULE_OPERATOR"]}><QuestionBankPage /></DashboardRoute>} />
           <Route path="/quiz" element={<DashboardRoute allowedRoles={["STUDENT"]}><QuizPage /></DashboardRoute>} />
           <Route path="/resume-builder" element={<DashboardRoute allowedRoles={["STUDENT"]}><ResumePage /></DashboardRoute>} />
+          <Route path="/student/my-applications" element={<DashboardRoute allowedRoles={["STUDENT"]}><MyApplicationsPage /></DashboardRoute>} />
           <Route path="/org/post-job" element={<DashboardRoute allowedRoles={["ORGANIZATION", "RECRUITER"]}><PostJobPage /></DashboardRoute>} />
+          <Route path="/org/review-applications" element={<DashboardRoute allowedRoles={["ORGANIZATION", "RECRUITER"]}><ReviewApplicationsPage /></DashboardRoute>} />
+          <Route path="/simulation" element={<DashboardRoute allowedRoles={["STUDENT"]}><SimulationRunner /></DashboardRoute>} />
+          <Route path="/org/post-job" element={<DashboardRoute allowedRoles={["ORGANIZATION", "RECRUITER"]}><PostJobPage /></DashboardRoute>} />
+          <Route path="/org/edit-job/:jobId" element={<DashboardRoute allowedRoles={["ORGANIZATION", "RECRUITER"]}><PostJobPage /></DashboardRoute>} />
+          <Route path="/org/job-listings" element={<DashboardRoute allowedRoles={["ORGANIZATION", "RECRUITER"]}><JobListingsPage /></DashboardRoute>} />
+          <Route path="/org/applicants/:jobId" element={<DashboardRoute allowedRoles={["ORGANIZATION", "RECRUITER"]}><ManageApplicantsPage /></DashboardRoute>} />
           <Route path="/admin/org-approvals" element={<DashboardRoute allowedRoles={["UNIVERSITY_ADMIN", "SYSTEM_ADMIN"]}><OrgApprovalsPage /></DashboardRoute>} />
           <Route path="/admin/contacts" element={<DashboardRoute allowedRoles={["SYSTEM_ADMIN"]}><ContactsPage /></DashboardRoute>} />
         </Routes>

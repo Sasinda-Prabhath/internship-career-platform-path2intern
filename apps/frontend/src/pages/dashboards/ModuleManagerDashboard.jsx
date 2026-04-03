@@ -127,6 +127,7 @@ export default function ModuleManagerDashboard() {
                     <DarkActionCard to="/module/question-bank" icon="🗄️" title="Question Bank" description="Browse all approved questions in the module bank." />
                     <DarkActionCard to="#" icon="📊" title="Module Analytics" description="View learner progress, quiz scores, and engagement." disabled />
                     <DarkActionCard to="#" icon="🏆" title="Leaderboard" description="See top-performing students ranked by scores." disabled />
+                    <DarkActionCard to="/simulation" icon="🎯" title="Interview Simulation" description="Practice with AI-generated interview questions for your modules." />
                 </div>
             </div>
         </div>
