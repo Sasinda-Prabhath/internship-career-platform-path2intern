@@ -164,6 +164,21 @@ export default function StudentDashboard() {
                                 <DarkActionCard to="#" icon="👤" title="Update Profile" description="Keep your profile and resume up to date for recruiters." disabled />
                             </div>
                         </div>
+
+                        <div className="bg-white border border-gray-200 rounded-2xl p-5">
+                            <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-widest mb-3">Resume Builder</h2>
+                            <p className="text-xs text-gray-500 mb-4">
+                                Create or update your resume in a dedicated builder tab.
+                            </p>
+                            <a
+                                href="/resume-builder"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center text-sm font-semibold text-blue-500 hover:text-blue-600 transition-colors"
+                            >
+                                Open Resume Builder ↗
+                            </a>
+                        </div>
                     </div>
 
                     {/* Module progress */}
