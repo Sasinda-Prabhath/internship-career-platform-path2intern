@@ -7,10 +7,12 @@ import authRoutes from "./routes/auth.routes.js";
 import moduleRoutes from "./routes/module.routes.js";
 import inviteRoutes from "./routes/invite.routes.js";
 import jobRoutes from "./routes/job.routes.js";
+import applicationRoutes from "./routes/application.routes.js";
 import orgRoutes from "./routes/org.routes.js";
 import contactRoutes from "./routes/contact.routes.js";
 import applicationRoutes from "./routes/application.routes.js";
 import advisorRoutes from "./routes/advisor.routes.js";
+import simulationRoutes from "./routes/simulation.routes.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -44,9 +46,11 @@ app.use("/api/auth", authRoutes);
 app.use("/api/module", moduleRoutes);
 app.use("/api/invite", inviteRoutes);
 app.use("/api/jobs", jobRoutes);
+app.use("/api/applications", applicationRoutes);
 app.use("/api/org", orgRoutes);
 app.use("/api/contact", contactRoutes);
 app.use("/api/applications", applicationRoutes);
 app.use("/api/advisor", advisorRoutes);
+app.use("/api/simulations", simulationRoutes);
 
 export default app;

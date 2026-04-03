@@ -3,9 +3,9 @@ import { useAuth } from "../../contexts/AuthContext";
 import { api } from "../../services/api";
 
 const STATUS_CHIP = {
-    PENDING: "bg-amber-500/20 text-amber-400 border-amber-500/30",
-    REPLIED: "bg-green-500/20 text-green-400 border-green-500/30",
-    UNREPLIED: "bg-slate-700 text-slate-400 border-slate-600",
+    PENDING: "bg-amber-100 text-amber-800 border-amber-300",
+    REPLIED: "bg-green-100 text-green-800 border-green-300",
+    UNREPLIED: "bg-gray-100 text-gray-800 border-gray-300",
 };
 
 export default function ContactsPage() {
@@ -75,37 +75,37 @@ export default function ContactsPage() {
 
                 <div className="space-y-4">
                     {contacts.map((c) => (
-                        <div key={c._id} className="bg-white border border-gray-200 rounded-2xl p-5 hover:border-gray-300 transition-colors">
+                        <div key={c._id} className="bg-white border border-gray-200 rounded-2xl p-6 hover:border-blue-300 hover:shadow-md transition-all">
                             <div className="flex items-start justify-between gap-4 flex-wrap">
                                 <div className="flex-1 min-w-0">
-                                    <div className="flex items-center gap-2 mb-1 flex-wrap">
-                                        <h3 className="font-semibold text-white">{c.name}</h3>
-                                        <span className={`text-xs px-2.5 py-0.5 rounded-full border font-medium ${c.replied ? STATUS_CHIP.REPLIED : STATUS_CHIP.UNREPLIED}`}>
+                                    <div className="flex items-center gap-2 mb-2 flex-wrap">
+                                        <h3 className="font-bold text-gray-900 text-lg">{c.name}</h3>
+                                        <span className={`text-xs px-3 py-1 rounded-full border font-semibold ${c.replied ? STATUS_CHIP.REPLIED : STATUS_CHIP.UNREPLIED}`}>
                                             {c.replied ? "✓ Replied" : "Unreplied"}
                                         </span>
                                     </div>
-                                    <p className="text-sm text-slate-400">{c.email}</p>
-                                    <p className="text-sm font-medium text-blue-400 mt-2">{c.subject}</p>
-                                    <p className="text-sm text-slate-300 mt-1 leading-relaxed">{c.message}</p>
+                                    <p className="text-sm text-gray-600 font-medium mb-3">{c.email}</p>
+                                    <p className="text-base font-semibold text-blue-600 mb-2">{c.subject}</p>
+                                    <p className="text-sm text-gray-700 leading-relaxed mb-3">{c.message}</p>
                                     {c.replied && c.replyText && (
-                                        <div className="mt-3 pl-3 border-l-2 border-green-500/40">
-                                            <p className="text-xs text-slate-400 mb-1">Your reply:</p>
-                                            <p className="text-sm text-slate-300">{c.replyText}</p>
-                                            <p className="text-xs text-slate-500 mt-1">{c.repliedAt ? new Date(c.repliedAt).toLocaleString() : ""}</p>
+                                        <div className="mt-4 pl-4 border-l-3 border-green-500 bg-green-50 p-3 rounded-lg">
+                                            <p className="text-xs font-semibold text-gray-600 mb-1">Your reply:</p>
+                                            <p className="text-sm text-gray-800">{c.replyText}</p>
+                                            <p className="text-xs text-gray-500 mt-2">{c.repliedAt ? new Date(c.repliedAt).toLocaleString() : ""}</p>
                                         </div>
                                     )}
-                                    <p className="text-xs text-slate-500 mt-2">{new Date(c.createdAt).toLocaleString()}</p>
+                                    <p className="text-xs text-gray-500 mt-3">{new Date(c.createdAt).toLocaleString()}</p>
                                 </div>
 
                                 <div className="flex gap-2 flex-shrink-0">
                                     {!c.replied && (
                                         <button onClick={() => { setReplyModal(c); setReplyText(""); }}
-                                            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-xl transition-colors">
+                                            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-xl transition-colors shadow-sm hover:shadow-md">
                                             Reply
                                         </button>
                                     )}
                                     <button onClick={() => setDeleteId(c._id)}
-                                        className="px-4 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 text-xs font-semibold rounded-xl border border-red-500/20 transition-colors">
+                                        className="px-4 py-2 bg-red-100 hover:bg-red-200 text-red-700 text-xs font-semibold rounded-xl border border-red-300 transition-colors">
                                         Delete
                                     </button>
                                 </div>
@@ -118,16 +118,16 @@ export default function ContactsPage() {
             {/* Reply modal */}
             {replyModal && (
                 <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-                    <div className="bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl p-6 max-w-md w-full">
-                        <h3 className="font-bold text-white text-lg mb-1">Reply to {replyModal.name}</h3>
-                        <p className="text-sm text-slate-400 mb-4">Subject: {replyModal.subject}</p>
+                    <div className="bg-white border border-gray-200 rounded-2xl shadow-2xl p-7 max-w-md w-full">
+                        <h3 className="font-bold text-gray-900 text-lg mb-1">Reply to {replyModal.name}</h3>
+                        <p className="text-sm text-gray-600 mb-4">Subject: {replyModal.subject}</p>
                         <textarea rows={5} value={replyText} onChange={(e) => setReplyText(e.target.value)}
                             placeholder="Type your reply here…"
-                            className="w-full bg-slate-800 border border-slate-700 text-white text-sm rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none mb-4 placeholder-slate-500" />
+                            className="w-full bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none mb-4 placeholder-gray-400" />
                         <div className="flex gap-3 justify-end">
-                            <button onClick={() => setReplyModal(null)} className="border border-slate-600 text-slate-400 px-4 py-2 rounded-xl text-sm hover:bg-slate-800">Cancel</button>
+                            <button onClick={() => setReplyModal(null)} className="border border-gray-300 text-gray-700 px-4 py-2 rounded-xl text-sm hover:bg-gray-50 transition-colors">Cancel</button>
                             <button onClick={sendReply} disabled={replyLoading || !replyText.trim()}
-                                className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-xl text-sm font-medium disabled:opacity-60 transition-colors">
+                                className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-xl text-sm font-medium disabled:opacity-60 transition-colors shadow-sm">
                                 {replyLoading ? "Sending…" : "Send Reply"}
                             </button>
                         </div>
@@ -138,14 +138,14 @@ export default function ContactsPage() {
             {/* Delete confirm */}
             {deleteId && (
                 <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-                    <div className="bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl p-6 max-w-sm w-full text-center">
+                    <div className="bg-white border border-gray-200 rounded-2xl shadow-2xl p-7 max-w-sm w-full text-center">
                         <div className="text-4xl mb-3">🗑️</div>
-                        <h3 className="text-lg font-bold text-white mb-2">Delete Message?</h3>
-                        <p className="text-sm text-slate-400 mb-6">This will permanently remove the contact message.</p>
+                        <h3 className="text-lg font-bold text-gray-900 mb-2">Delete Message?</h3>
+                        <p className="text-sm text-gray-600 mb-6">This will permanently remove the contact message.</p>
                         <div className="flex gap-3 justify-center">
-                            <button onClick={() => setDeleteId(null)} className="border border-slate-600 text-slate-400 px-5 py-2 rounded-xl text-sm">Cancel</button>
+                            <button onClick={() => setDeleteId(null)} className="border border-gray-300 text-gray-700 px-5 py-2 rounded-xl text-sm hover:bg-gray-50 transition-colors">Cancel</button>
                             <button onClick={handleDelete} disabled={deleting}
-                                className="bg-red-600 hover:bg-red-700 text-white px-5 py-2 rounded-xl text-sm font-medium disabled:opacity-60">
+                                className="bg-red-600 hover:bg-red-700 text-white px-5 py-2 rounded-xl text-sm font-medium disabled:opacity-60 transition-colors shadow-sm">
                                 {deleting ? "Deleting…" : "Delete"}
                             </button>
                         </div>

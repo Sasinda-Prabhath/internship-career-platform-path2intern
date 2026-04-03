@@ -9,10 +9,19 @@ export function AuthProvider({ children }) {
 
     // Restore session on mount by calling /api/auth/me
     useEffect(() => {
-        api.get("/api/auth/me")
-            .then((res) => setUser(res.data.user))
-            .catch(() => setUser(null))
-            .finally(() => setLoading(false));
+        const checkAuth = async () => {
+            try {
+                const res = await api.get("/api/auth/me", { timeout: 5000 }); // 5 second timeout
+                setUser(res.data.user);
+            } catch (error) {
+                console.log("Auth check failed:", error.message);
+                setUser(null);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        checkAuth();
     }, []);
 
     const login = (userData) => {

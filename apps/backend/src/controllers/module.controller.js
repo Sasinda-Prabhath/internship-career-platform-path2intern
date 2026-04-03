@@ -326,21 +326,24 @@ export const getPendingQuestions = async (req, res) => {
  * GET /api/module/questions/:module/approved
  * Guard: requireAuth (any authenticated user — students, managers, operators)
  *
- * Returns only approved questions (hides correct answers for student-facing use).
- * Managers/operators see full data; students see no correctOption.
+ * Returns only approved questions.
+ * - Default (no query param): hides correct answers/explanations for students
+ * - ?withAnswers=true: returns full data (correct answers + explanations) for review/managers
  */
 export const getApprovedQuestions = async (req, res) => {
     try {
         const { module } = req.params;
         validateModule(module);
 
-        const { withAnswers } = req.query; // ?withAnswers=true for managers
+        const { withAnswers } = req.query;
 
         const questions = await Question.find({ module, status: "approved" })
             .sort({ createdAt: -1 })
             .lean();
 
-        // Hide correct answers unless explicitly requested AND the user is a manager/operator
+        // Return full data if:
+        // 1. User is privileged (SYSTEM_ADMIN or UNIVERSITY_ADMIN), OR
+        // 2. Request includes ?withAnswers=true (for quiz reviews by any authenticated user)
         const isPrivileged =
             req.user?.globalRole === "SYSTEM_ADMIN" ||
             req.user?.globalRole === "UNIVERSITY_ADMIN" ||
@@ -348,7 +351,7 @@ export const getApprovedQuestions = async (req, res) => {
 
         const formatted = questions.map((q) => {
             if (!isPrivileged) {
-                // Strip correctOption and explanation for students
+                // Strip correctOption and explanation for non-privileged users
                 // eslint-disable-next-line no-unused-vars
                 const { correctOption, explanation, ...safe } = q;
                 return safe;

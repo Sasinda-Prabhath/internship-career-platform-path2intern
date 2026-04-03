@@ -44,7 +44,7 @@ export default function OrgApprovalsPage() {
         finally { setActionLoading(false); }
     };
 
-    const docUrl = (url) => url ? `${import.meta.env.VITE_API_URL || "http://localhost:3000"}${url}` : null;
+    const docUrl = (url) => url ? `${import.meta.env.VITE_API_URL || "http://localhost:5000"}${url}` : null;
 
     return (
         <div className="min-h-screen bg-gray-50">
@@ -88,20 +88,20 @@ export default function OrgApprovalsPage() {
                                     </div>
                                     <div className="flex-1 min-w-0">
                                         <div className="flex items-center gap-2 flex-wrap mb-1">
-                                            <h3 className="font-bold text-white">{org.organizationName || "—"}</h3>
+                                            <h3 className="font-bold text-gray-900">{org.organizationName || "—"}</h3>
                                             <span className={`text-xs font-medium px-2.5 py-0.5 rounded-full border ${STATUS_CHIP[org.status] || "bg-slate-800 text-slate-400 border-slate-700"}`}>{org.status}</span>
                                         </div>
-                                        <p className="text-sm text-slate-400">Contact: {org.name}</p>
-                                        <p className="text-sm text-slate-400">Email: {org.email}</p>
-                                        <p className="text-xs text-slate-600 mt-1">Applied: {new Date(org.createdAt).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}</p>
-                                        {org.approvalNote && <p className="text-xs text-red-400 mt-1">Note: {org.approvalNote}</p>}
+                                        <p className="text-sm text-gray-700 font-medium">Contact: {org.name}</p>
+                                        <p className="text-sm text-gray-700 font-medium">Email: {org.email}</p>
+                                        <p className="text-xs text-gray-500 mt-1.5">Applied: {new Date(org.createdAt).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}</p>
+                                        {org.approvalNote && <p className="text-xs text-red-600 mt-1.5 font-medium">Note: {org.approvalNote}</p>}
                                         {org.documentUrl ? (
                                             <a href={docUrl(org.documentUrl)} target="_blank" rel="noopener noreferrer"
-                                                className="inline-flex items-center gap-1.5 text-xs text-blue-400 hover:text-blue-300 transition-colors mt-2">
+                                                className="inline-flex items-center gap-1.5 text-xs text-blue-600 hover:text-blue-700 font-semibold transition-colors mt-2.5">
                                                 📄 View Business Document
                                             </a>
                                         ) : (
-                                            <span className="text-xs text-slate-600 mt-2 block">No document uploaded</span>
+                                            <span className="text-xs text-gray-500 mt-2.5 block">No document uploaded</span>
                                         )}
                                     </div>
                                     {org.status === "PENDING" && (
