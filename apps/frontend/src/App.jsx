@@ -1,4 +1,6 @@
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 import Navbar from "./components/Navbar";
 import ProtectedRoute from "./components/ProtectedRoute";
 import DashboardLayout from "./components/DashboardLayout";
@@ -27,7 +29,7 @@ import QuestionBankPage from "./pages/module/QuestionBankPage";
 
 // Student pages
 import QuizPage from "./pages/quiz/QuizPage";
-import SimulationRunner from "./pages/SimulationRunner";
+import MyApplicationsPage from "./pages/student/MyApplicationsPage";
 
 // University Admin pages
 import StaffManagementPage from "./pages/staff/StaffManagementPage";
@@ -36,6 +38,7 @@ import ContactsPage from "./pages/admin/ContactsPage";
 
 // Organisation pages
 import PostJobPage from "./pages/org/PostJobPage";
+import ReviewApplicationsPage from "./pages/org/ReviewApplicationsPage";
 import JobListingsPage from "./pages/org/JobListingsPage";
 import ManageApplicantsPage from "./pages/org/ManageApplicantsPage";
 
@@ -54,6 +57,7 @@ function App() {
   return (
     <Router>
       <div className="min-h-screen bg-[#0a0f1e] font-sans text-gray-900 flex flex-col">
+        <ToastContainer />
 
         <Routes>
           {/* ── Public ─────────────────────────────────────────── */}
@@ -101,8 +105,11 @@ function App() {
           <Route path="/module/submit-question" element={<DashboardRoute allowedRoles={["MODULE_MANAGER", "MODULE_OPERATOR"]}><SubmitQuestionPage /></DashboardRoute>} />
           <Route path="/module/review" element={<DashboardRoute allowedRoles={["MODULE_MANAGER"]}><ReviewQueuePage /></DashboardRoute>} />
           <Route path="/module/question-bank" element={<DashboardRoute allowedRoles={["MODULE_MANAGER", "MODULE_OPERATOR"]}><QuestionBankPage /></DashboardRoute>} />
-          <Route path="/quiz" element={<DashboardRoute allowedRoles={["STUDENT", "MODULE_MANAGER", "MODULE_OPERATOR"]}><QuizPage /></DashboardRoute>} />
-          <Route path="/simulation" element={<DashboardRoute allowedRoles={["STUDENT", "MODULE_MANAGER", "MODULE_OPERATOR"]}><SimulationRunner /></DashboardRoute>} />
+          <Route path="/quiz" element={<DashboardRoute allowedRoles={["STUDENT"]}><QuizPage /></DashboardRoute>} />
+          <Route path="/student/my-applications" element={<DashboardRoute allowedRoles={["STUDENT"]}><MyApplicationsPage /></DashboardRoute>} />
+          <Route path="/org/post-job" element={<DashboardRoute allowedRoles={["ORGANIZATION", "RECRUITER"]}><PostJobPage /></DashboardRoute>} />
+          <Route path="/org/review-applications" element={<DashboardRoute allowedRoles={["ORGANIZATION", "RECRUITER"]}><ReviewApplicationsPage /></DashboardRoute>} />
+          <Route path="/simulation" element={<DashboardRoute allowedRoles={["STUDENT"]}><SimulationRunner /></DashboardRoute>} />
           <Route path="/org/post-job" element={<DashboardRoute allowedRoles={["ORGANIZATION", "RECRUITER"]}><PostJobPage /></DashboardRoute>} />
           <Route path="/org/edit-job/:jobId" element={<DashboardRoute allowedRoles={["ORGANIZATION", "RECRUITER"]}><PostJobPage /></DashboardRoute>} />
           <Route path="/org/job-listings" element={<DashboardRoute allowedRoles={["ORGANIZATION", "RECRUITER"]}><JobListingsPage /></DashboardRoute>} />

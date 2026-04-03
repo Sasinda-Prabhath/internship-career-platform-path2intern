@@ -18,9 +18,9 @@ const StatCard = ({ label, value, icon, accent, sub }) => (
 );
 
 /* ── Job row in recent listings ────────────────────────────────────────── */
-const JobRow = ({ job }) => {
-    const age = Date.now() - new Date(job.createdAt).getTime();
-    const canEdit = age < 2 * 60 * 1000;
+const JobRow = ({ job, currentTime }) => {
+    const age = currentTime - new Date(job.createdAt).getTime();
+    const canEdit = age < 10 * 60 * 1000;
     const WORK_COLORS = {
         Remote: "bg-green-100 text-green-700",
         Hybrid: "bg-blue-100 text-blue-700",
@@ -82,12 +82,18 @@ const OrgActionCard = ({ to, icon, title, description, accent = "blue", disabled
 export default function OrgDashboard() {
     const { user } = useAuth();
     const [jobs, setJobs] = useState([]);
+    const [applications, setApplications] = useState([]);
     const [loading, setLoading] = useState(true);
+    const currentTime = Date.now();
 
     const fetchJobs = useCallback(async () => {
         try {
-            const res = await api.get("/api/jobs/mine");
-            setJobs(res.data.jobs || []);
+            const [jobsRes, applicationsRes] = await Promise.all([
+                api.get("/api/jobs/mine"),
+                api.get("/api/jobs/applications/received"),
+            ]);
+            setJobs(jobsRes.data.jobs || []);
+            setApplications(applicationsRes.data.applications || []);
         } catch { /* ignore */ }
         finally { setLoading(false); }
     }, []);
@@ -95,6 +101,8 @@ export default function OrgDashboard() {
     useEffect(() => { fetchJobs(); }, [fetchJobs]);
 
     const activeJobs = jobs.filter(j => j.status === "active");
+    const submittedApplications = applications.filter((application) => application.status === "submitted");
+    const shortlistedApplications = applications.filter((application) => application.status === "shortlisted");
 
     return (
         <div className="min-h-screen bg-gray-50">
@@ -137,18 +145,18 @@ export default function OrgDashboard() {
                         sub="Since account created"
                     />
                     <StatCard
-                        label="Applications"
-                        value="—"
+                        label="ApplicationsS"
+                        value={loading ? "—" : applications.length}
                         icon="📝"
                         accent={{ bg: "bg-amber-50", text: "text-amber-600" }}
-                        sub="Coming soon"
+                        sub={loading ? "Loading..." : `${submittedApplications.length} awaiting review`}
                     />
                     <StatCard
                         label="Shortlisted"
-                        value="—"
+                        value={loading ? "—" : shortlistedApplications.length}
                         icon="⭐"
                         accent={{ bg: "bg-purple-50", text: "text-purple-600" }}
-                        sub="Coming soon"
+                        sub={loading ? "Loading..." : "Candidates ready for follow-up"}
                     />
                 </div>
 
@@ -173,7 +181,23 @@ export default function OrgDashboard() {
                                     description="View, edit (within 2 min), or delete your job posts."
                                     accent="blue"
                                 />
+                                <div className="bg-white border border-gray-200 rounded-2xl p-5 flex items-start gap-4 hover:border-purple-300 hover:-translate-y-0.5 hover:shadow-md cursor-pointer transition-all duration-200"
+                                    onClick={() => {
+                                        window.open(`${api.defaults.baseURL}/api/jobs/download-pdf`, '_blank');
+                                    }}>
+                                    <div className="w-10 h-10 rounded-xl bg-purple-50 text-purple-600 font-bold text-xs flex items-center justify-center flex-shrink-0">
+                                        📄
+                                    </div>
+                                    <div>
+                                        <p className="text-sm font-semibold text-gray-900 mb-0.5">Download PDF</p>
+                                        <p className="text-xs text-gray-500 leading-relaxed">Get a PDF document of all your posted jobs.</p>
+                                    </div>
+                                </div>
                                 <OrgActionCard
+                                    to="/org/review-applications?filter=shortlisted"
+                                    icon="👥"
+                                    title="Shortlish Candidtes"
+                                    description="See all student applications for your listings."
                                     to="/org/job-listings"
                                     icon="👥"
                                     title="Review Applications"
@@ -181,12 +205,11 @@ export default function OrgDashboard() {
                                     accent="amber"
                                 />
                                 <OrgActionCard
-                                    to="#"
+                                    to="/org/review-applications"
                                     icon="✅"
-                                    title="Shortlist Candidates"
+                                    title="Review Application"
                                     description="Mark promising applicants and update their status."
                                     accent="purple"
-                                    disabled
                                 />
                                 <OrgActionCard
                                     to="/simulation"
@@ -198,6 +221,56 @@ export default function OrgDashboard() {
                             </div>
                         </div>
 
+                        {/* Tips card */}
+                        <div className="bg-gradient-to-br from-green-50 to-emerald-50 border border-green-200 rounded-2xl p-5">
+                            <h3 className="text-sm font-semibold text-green-800 mb-2">📌 Tips for Better Visibility</h3>
+                            <ul className="text-xs text-green-700 space-y-1.5 leading-relaxed">
+                                <li>• Add detailed job descriptions to attract the right candidates</li>
+                                <li>• Include required skills so students can self-filter</li>
+                                <li>• Set a realistic salary range — it significantly increases applications</li>
+                                <li>• You can edit a post within 10 minutes of publishing</li>
+                            </ul>
+                        </div>
+
+                        <div className="bg-white border border-gray-200 rounded-2xl p-5">
+                            <div className="flex items-center justify-between mb-4">
+                                <h3 className="text-sm font-semibold text-gray-900">Latest Applications</h3>
+                                <Link to="/org/review-applications" className="text-xs text-blue-600 hover:underline font-medium">Open review page</Link>
+                            </div>
+
+                            {!loading && applications.length === 0 && (
+                                <p className="text-sm text-gray-400">Applications from students will appear here once they start applying.</p>
+                            )}
+
+                            {loading && (
+                                <div className="space-y-3">
+                                    {[1, 2, 3].map((item) => (
+                                        <div key={item} className="animate-pulse border-b border-gray-100 pb-3 last:border-0 last:pb-0">
+                                            <div className="h-3 bg-gray-100 rounded w-1/3 mb-2" />
+                                            <div className="h-3 bg-gray-100 rounded w-2/3 mb-1.5" />
+                                            <div className="h-2 bg-gray-100 rounded w-1/2" />
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+
+                            {!loading && applications.length > 0 && (
+                                <div className="space-y-3">
+                                    {applications.slice(0, 4).map((application) => (
+                                        <div key={application._id} className="border-b border-gray-100 pb-3 last:border-0 last:pb-0">
+                                            <div className="flex items-center justify-between gap-3 mb-1">
+                                                <p className="text-sm font-semibold text-gray-900 truncate">{application.student?.name || "Student"}</p>
+                                                <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200">
+                                                    {application.status}
+                                                </span>
+                                            </div>
+                                            <p className="text-sm text-gray-600 truncate">{application.job?.title || "Job deleted"}</p>
+                                            <p className="text-xs text-gray-400 mt-1">Applied on {new Date(application.createdAt).toLocaleDateString()}</p>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
                     </div>
 
                     {/* Recent listings panel */}
@@ -234,7 +307,7 @@ export default function OrgDashboard() {
 
                         {!loading && jobs.length > 0 && (
                             <div>
-                                {jobs.slice(0, 5).map(job => <JobRow key={job._id} job={job} />)}
+                                {jobs.slice(0, 5).map(job => <JobRow key={job._id} job={job} currentTime={currentTime} />)}
                                 {jobs.length > 5 && (
                                     <Link to="/org/post-job" className="block text-center text-xs text-blue-600 hover:underline mt-3 font-medium">
                                         +{jobs.length - 5} more listings →

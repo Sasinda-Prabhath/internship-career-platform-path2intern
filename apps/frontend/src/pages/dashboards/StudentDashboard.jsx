@@ -44,6 +44,15 @@ const DarkActionCard = ({ to, icon, title, description, disabled }) => (
 
 export default function StudentDashboard() {
     const { user } = useAuth();
+    const [applications, setApplications] = useState([]);
+
+    useEffect(() => {
+        api.get("/api/jobs/applications/mine")
+            .then(({ data }) => setApplications(data.applications))
+            .catch(() => {});
+    }, []);
+
+    const shortlisted = applications.filter((a) => a.status === "shortlisted").length;
     const [jobs, setJobs] = useState([]);
     const [jobsLoading, setJobsLoading] = useState(true);
 
@@ -81,8 +90,8 @@ export default function StudentDashboard() {
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
                 {/* Stats */}
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
-                    <StatCard label="Applications Sent" value="0" icon="📨" accent="text-blue-400" />
-                    <StatCard label="Shortlisted" value="0" icon="⭐" accent="text-indigo-400" />
+                    <StatCard label="Applications Sent" value={applications.length} icon="📨" accent="text-blue-400" />
+                    <StatCard label="Shortlisted" value={shortlisted} icon="⭐" accent="text-indigo-400" />
                     <StatCard label="Quizzes Done" value="0" icon="🧠" accent="text-violet-400" />
                     <StatCard label="Modules Progress" value="0%" icon="📈" accent="text-purple-400" />
                 </div>
@@ -149,6 +158,7 @@ export default function StudentDashboard() {
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <DarkActionCard to="/" icon="🔍" title="Browse Internships" description="Explore the latest internship opportunities from verified companies." />
                                 <DarkActionCard to="/quiz" icon="🧠" title="Take a Quiz" description="Test your knowledge across your module areas." />
+                                <DarkActionCard to="/student/my-applications" icon="📝" title="My Applications" description="Track all internship applications you've submitted." />
                                 <DarkActionCard to="/simulation" icon="🎯" title="Interview Simulation" description="Practice with AI-generated interview questions for your modules." />
                                 <DarkActionCard to="#" icon="📝" title="My Applications" description="Track all internship applications you've submitted." disabled />
                                 <DarkActionCard to="#" icon="👤" title="Update Profile" description="Keep your profile and resume up to date for recruiters." disabled />

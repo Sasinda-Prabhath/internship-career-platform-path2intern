@@ -1,5 +1,12 @@
 import { Job } from "../models/job.model.js";
 import { Application } from "../models/application.model.js";
+import PDFDocument from "pdfkit";
+import fs from "fs";
+import path from "path";
+import { fileURLToPath } from "url";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
 import { User } from "../models/user.model.js";
 
 const EDIT_WINDOW_MS = 2 * 60 * 1000; // 2 minutes
@@ -13,6 +20,16 @@ const salaryDisplay = (job) => {
     return `Up to ${cur} ${job.salaryMax.toLocaleString()} / ${per}`;
 };
 
+const resolveUploadPath = (fileUrl) => path.join(__dirname, "../../", fileUrl.replace(/^\//, ""));
+
+const buildApplicationSummary = (application) => ({
+    ...application,
+    cvDownloadUrl: `/api/jobs/applications/${application._id}/download-cv`,
+});
+
+const allowedApplicationStatuses = ["submitted", "shortlisted", "rejected"];
+
+// GET /api/jobs  — public, all active jobs newest first
 // GET /api/jobs/:id  — public, get single job
 export const getJob = async (req, res) => {
     try {
@@ -63,10 +80,25 @@ export const getMyJobs = async (req, res) => {
         const jobs = await Job.find({ postedBy: req.user.userId })
             .sort({ createdAt: -1 })
             .lean();
+        const applicationsByJob = await Application.aggregate([
+            {
+                $match: {
+                    organization: jobObjectId(req.user.userId),
+                },
+            },
+            {
+                $group: {
+                    _id: "$job",
+                    total: { $sum: 1 },
+                },
+            },
+        ]);
+        const counts = new Map(applicationsByJob.map((entry) => [entry._id.toString(), entry.total]));
         const now = Date.now();
         const annotated = jobs.map((j) => ({
             ...j,
             salaryDisplay: salaryDisplay(j),
+            applicationCount: counts.get(j._id.toString()) || 0,
             canEdit: now - new Date(j.createdAt).getTime() < EDIT_WINDOW_MS,
             editExpiresAt: new Date(new Date(j.createdAt).getTime() + EDIT_WINDOW_MS),
         }));
@@ -173,6 +205,7 @@ export const deleteJob = async (req, res) => {
         if (!job) return res.status(404).json({ message: "Job not found" });
         if (job.postedBy.toString() !== req.user.userId)
             return res.status(403).json({ message: "You can only delete your own job posts" });
+        await Application.deleteMany({ job: job._id });
         await Job.deleteOne({ _id: job._id });
         // Also remove all applications for this job
         await Application.deleteMany({ jobId: job._id });
@@ -182,6 +215,129 @@ export const deleteJob = async (req, res) => {
     }
 };
 
+const jobObjectId = (id) => Application.db.base.Types.ObjectId.createFromHexString(id);
+
+// POST /api/jobs/:id/apply  — student only
+export const applyToJob = async (req, res) => {
+    try {
+        const job = await Job.findOne({ _id: req.params.id, status: "active" }).lean();
+        if (!job) return res.status(404).json({ message: "Job not found" });
+
+        if (!req.file) {
+            return res.status(400).json({ message: "Please upload your CV as a PDF" });
+        }
+
+        if (String(job.postedBy) === req.user.userId) {
+            return res.status(400).json({ message: "You cannot apply to your own job post" });
+        }
+
+        if (job.deadline && new Date(job.deadline).getTime() < Date.now()) {
+            return res.status(400).json({ message: "This application deadline has passed" });
+        }
+
+        const existing = await Application.findOne({ job: job._id, student: req.user.userId }).lean();
+        if (existing) {
+            return res.status(409).json({ message: "You have already applied to this job" });
+        }
+
+        const application = await Application.create({
+            job: job._id,
+            student: req.user.userId,
+            organization: job.postedBy,
+            cvUrl: `/uploads/student-cvs/${req.file.filename}`,
+            cvOriginalName: req.file.originalname,
+        });
+
+        res.status(201).json({
+            message: "Application submitted successfully",
+            application: buildApplicationSummary(application.toObject()),
+        });
+    } catch (e) {
+        if (e.code === 11000) {
+            return res.status(409).json({ message: "You have already applied to this job" });
+        }
+        res.status(400).json({ message: e.message });
+    }
+};
+
+// GET /api/jobs/applications/mine  — student only
+export const getMyApplications = async (req, res) => {
+    try {
+        const applications = await Application.find({ student: req.user.userId })
+            .populate("job", "title company location type workMode deadline status")
+            .populate("organization", "name organizationName")
+            .sort({ createdAt: -1 })
+            .lean();
+        res.json({ total: applications.length, applications });
+    } catch (e) {
+        res.status(500).json({ message: e.message });
+    }
+};
+
+// GET /api/jobs/applications/received  — organization only
+export const getReceivedApplications = async (req, res) => {
+    try {
+        const applications = await Application.find({ organization: req.user.userId })
+            .populate("student", "name email")
+            .populate("job", "title company location type workMode deadline")
+            .sort({ createdAt: -1 })
+            .lean();
+
+        const result = applications.map(buildApplicationSummary);
+        res.json({ total: result.length, applications: result });
+    } catch (e) {
+        res.status(500).json({ message: e.message });
+    }
+};
+
+// PATCH /api/jobs/applications/:applicationId/status  — organization only
+export const updateApplicationStatus = async (req, res) => {
+    try {
+        const { status } = req.body;
+        if (!allowedApplicationStatuses.includes(status)) {
+            return res.status(400).json({ message: "Invalid application status" });
+        }
+
+        const application = await Application.findOne({
+            _id: req.params.applicationId,
+            organization: req.user.userId,
+        })
+            .populate("student", "name email")
+            .populate("job", "title company location type workMode deadline");
+
+        if (!application) {
+            return res.status(404).json({ message: "Application not found" });
+        }
+
+        application.status = status;
+        await application.save();
+
+        res.json({
+            message: "Application status updated",
+            application: buildApplicationSummary(application.toObject()),
+        });
+    } catch (e) {
+        res.status(500).json({ message: e.message });
+    }
+};
+
+// GET /api/jobs/applications/:applicationId/download-cv  — organization only
+export const downloadApplicationCv = async (req, res) => {
+    try {
+        const application = await Application.findOne({
+            _id: req.params.applicationId,
+            organization: req.user.userId,
+        }).lean();
+        if (!application) {
+            return res.status(404).json({ message: "Application not found" });
+        }
+
+        const absolutePath = resolveUploadPath(application.cvUrl);
+        if (!fs.existsSync(absolutePath)) {
+            return res.status(404).json({ message: "CV file not found" });
+        }
+
+        res.download(absolutePath, application.cvOriginalName);
 // GET /api/jobs/:id/applicants  — org only, their own job
 export const getJobApplicants = async (req, res) => {
     try {
@@ -201,6 +357,72 @@ export const getJobApplicants = async (req, res) => {
     }
 };
 
+// GET /api/jobs/download-pdf  — org only, download PDF of their jobs
+export const downloadJobsPDF = async (req, res) => {
+    try {
+        const jobs = await Job.find({ postedBy: req.user.userId })
+            .sort({ createdAt: -1 })
+            .lean();
+
+        if (jobs.length === 0) {
+            return res.status(404).json({ message: "No jobs found" });
+        }
+
+        // Create PDF document
+        const doc = new PDFDocument();
+        const filename = `jobs_${new Date().toISOString().split('T')[0]}.pdf`;
+
+        // Set response headers
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+
+        // Pipe PDF to response
+        doc.pipe(res);
+
+        // Add title
+        doc.fontSize(20).text('My Job Postings', { align: 'center' });
+        doc.moveDown();
+        doc.fontSize(12).text(`Generated on ${new Date().toLocaleDateString()}`, { align: 'center' });
+        doc.moveDown(2);
+
+        // Add each job
+        jobs.forEach((job, index) => {
+            if (index > 0) doc.addPage();
+
+            doc.fontSize(16).text(job.title, { underline: true });
+            doc.moveDown(0.5);
+            doc.fontSize(12).text(`Company: ${job.company}`);
+            doc.text(`Location: ${job.location}`);
+            doc.text(`Type: ${job.type} | Work Mode: ${job.workMode}`);
+            if (job.duration) doc.text(`Duration: ${job.duration}`);
+            const salary = salaryDisplay(job);
+            if (salary) doc.text(`Salary: ${salary}`);
+            if (job.deadline) doc.text(`Deadline: ${new Date(job.deadline).toLocaleDateString()}`);
+            doc.text(`Posted: ${new Date(job.createdAt).toLocaleDateString()}`);
+            doc.moveDown();
+
+            doc.fontSize(14).text('Description:', { underline: true });
+            doc.moveDown(0.5);
+            doc.fontSize(10).text(job.description);
+            doc.moveDown();
+
+            if (job.skills && job.skills.length > 0) {
+                doc.fontSize(14).text('Required Skills:', { underline: true });
+                doc.moveDown(0.5);
+                doc.fontSize(10).list(job.skills);
+                doc.moveDown();
+            }
+
+            if (job.requirements) {
+                doc.fontSize(14).text('Requirements:', { underline: true });
+                doc.moveDown(0.5);
+                doc.fontSize(10).text(job.requirements);
+                doc.moveDown();
+            }
+        });
+
+        // Finalize PDF
+        doc.end();
 // PATCH /api/jobs/:id/applicants/:appId  — org only
 export const updateApplicantStatus = async (req, res) => {
     try {
