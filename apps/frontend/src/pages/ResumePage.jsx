@@ -14,6 +14,12 @@ const splitComma = (value) =>
     .map((item) => item.trim())
     .filter(Boolean);
 
+const isValidEmail = (value) => {
+  const email = (value || "").trim();
+  if (!email) return false;
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+};
+
 const blockedHeadlineKeywords = ["docker", "git", "aws", "azure"];
 
 const sanitizeHeadline = (value) => {
@@ -227,6 +233,11 @@ export default function ResumePage() {
   }, [historyNotice]);
 
   const previewElement = useMemo(() => <ResumeTemplateOne data={formData} />, [formData]);
+  const emailValue = formData.personalInfo.email || "";
+  const emailHasInput = emailValue.trim().length > 0;
+  const emailError = emailHasInput && !isValidEmail(emailValue)
+    ? "Enter a valid email address (example: name@example.com)."
+    : "";
 
   const updatePersonalInfo = (field, value) => {
     setFormData((prev) => ({
@@ -256,6 +267,11 @@ export default function ResumePage() {
   };
 
   const handleSaveResume = () => {
+    if (!isValidEmail(formData.personalInfo.email)) {
+      setHistoryNotice("Please enter a valid email before saving.");
+      return;
+    }
+
     const now = new Date().toISOString();
     const displayName = formData.personalInfo.name?.trim() || "Untitled Resume";
 
@@ -307,6 +323,11 @@ export default function ResumePage() {
   };
 
   const handleDownloadPdf = async () => {
+    if (!isValidEmail(formData.personalInfo.email)) {
+      setHistoryNotice("Please enter a valid email before downloading.");
+      return;
+    }
+
     try {
       setDownloadLoading(true);
       setHistoryNotice("Generating PDF...");
@@ -549,7 +570,8 @@ export default function ResumePage() {
             <input placeholder="Full Name" value={formData.personalInfo.name} onChange={(e) => updatePersonalInfo("name", e.target.value)} className="w-full px-4 py-2 border border-gray-300 rounded-lg" />
             <input placeholder="Headline (example: Software Engineering | Data Science)" value={formData.personalInfo.headline} onChange={(e) => updatePersonalInfo("headline", e.target.value)} className="w-full px-4 py-2 border border-gray-300 rounded-lg" />
             <input placeholder="Location" value={formData.personalInfo.location} onChange={(e) => updatePersonalInfo("location", e.target.value)} className="w-full px-4 py-2 border border-gray-300 rounded-lg" />
-            <input placeholder="Email" value={formData.personalInfo.email} onChange={(e) => updatePersonalInfo("email", e.target.value)} className="w-full px-4 py-2 border border-gray-300 rounded-lg" />
+            <input type="email" placeholder="Email" value={formData.personalInfo.email} onChange={(e) => updatePersonalInfo("email", e.target.value)} className={`w-full px-4 py-2 border rounded-lg ${emailError ? "border-red-500" : "border-gray-300"}`} />
+            {emailError && <p className="text-xs text-red-600 -mt-1">{emailError}</p>}
             <input placeholder="Phone" value={formData.personalInfo.phone} onChange={(e) => updatePersonalInfo("phone", e.target.value)} className="w-full px-4 py-2 border border-gray-300 rounded-lg" />
             <input placeholder="LinkedIn URL" value={formData.personalInfo.linkedin} onChange={(e) => updatePersonalInfo("linkedin", e.target.value)} className="w-full px-4 py-2 border border-gray-300 rounded-lg" />
           </div>
