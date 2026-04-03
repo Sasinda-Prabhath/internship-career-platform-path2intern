@@ -32,15 +32,18 @@ const JobRow = ({ job, currentTime }) => {
                 {job.company?.[0]?.toUpperCase() || "J"}
             </div>
             <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-gray-900 truncate">{job.title}</p>
+                <Link to={`/org/applicants/${job._id}`} className="hover:underline">
+                    <p className="text-sm font-medium text-gray-900 truncate">{job.title}</p>
+                </Link>
                 <p className="text-xs text-gray-400">{job.location} · {job.type}</p>
             </div>
             <div className="flex items-center gap-2 flex-shrink-0">
                 <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${WORK_COLORS[job.workMode] || "bg-gray-100 text-gray-600"}`}>
                     {job.workMode}
                 </span>
+                <Link to={`/org/applicants/${job._id}`} className="text-xs text-purple-600 hover:underline font-medium">Applicants</Link>
                 {canEdit && (
-                    <Link to="/org/post-job" className="text-xs text-blue-600 hover:underline font-medium">Edit</Link>
+                    <Link to={`/org/edit-job/${job._id}`} className="text-xs text-blue-600 hover:underline font-medium">Edit</Link>
                 )}
             </div>
         </div>
@@ -172,10 +175,10 @@ export default function OrgDashboard() {
                                     accent="green"
                                 />
                                 <OrgActionCard
-                                    to="/org/post-job"
+                                    to="/org/job-listings"
                                     icon="📋"
                                     title="Manage Listings"
-                                    description="View, edit (within 10 min), or delete your job posts."
+                                    description="View, edit (within 2 min), or delete your job posts."
                                     accent="blue"
                                 />
                                 <div className="bg-white border border-gray-200 rounded-2xl p-5 flex items-start gap-4 hover:border-purple-300 hover:-translate-y-0.5 hover:shadow-md cursor-pointer transition-all duration-200"
@@ -195,6 +198,10 @@ export default function OrgDashboard() {
                                     icon="👥"
                                     title="Shortlish Candidtes"
                                     description="See all student applications for your listings."
+                                    to="/org/job-listings"
+                                    icon="👥"
+                                    title="Review Applications"
+                                    description="Click a job listing then 'Applicants' to review submissions."
                                     accent="amber"
                                 />
                                 <OrgActionCard
@@ -203,6 +210,13 @@ export default function OrgDashboard() {
                                     title="Review Application"
                                     description="Mark promising applicants and update their status."
                                     accent="purple"
+                                />
+                                <OrgActionCard
+                                    to="/simulation"
+                                    icon="🎯"
+                                    title="Interview Simulation"
+                                    description="Practice with AI-generated interview questions for your modules."
+                                    accent="blue"
                                 />
                             </div>
                         </div>
@@ -263,7 +277,7 @@ export default function OrgDashboard() {
                     <div className="bg-white border border-gray-200 rounded-2xl p-5">
                         <div className="flex items-center justify-between mb-4">
                             <h3 className="text-sm font-semibold text-gray-900">Your Listings</h3>
-                            <Link to="/org/post-job" className="text-xs text-blue-600 hover:underline font-medium">View all</Link>
+                            <Link to="/org/job-listings" className="text-xs text-blue-600 hover:underline font-medium">View all</Link>
                         </div>
 
                         {loading && (

@@ -181,6 +181,7 @@ function ApplyJobModal({ job, onClose, onApplied }) {
           </form>
         </div>
       </div>
+      <Link to={`/job/${job._id}`} className="mt-auto w-full text-center text-sm font-medium text-blue-600 border border-blue-200 rounded-xl py-2 hover:bg-blue-600 hover:text-white hover:border-blue-600 transition-colors bg-blue-50">View Job</Link>
     </div>
   );
 }

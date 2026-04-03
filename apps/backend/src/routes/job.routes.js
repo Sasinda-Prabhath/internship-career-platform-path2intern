@@ -20,8 +20,13 @@ const router = Router();
 // Public — anyone can browse jobs
 router.get("/", getJobs);
 
-// Org-only routes
+// Auth required for all routes below
 router.use(requireAuth);
+
+// Student — apply to a job (with optional CV file upload)
+router.post("/:id/apply", requireRole("STUDENT"), uploadCV, applyToJob);
+
+// Org-only routes
 router.get("/mine", requireRole("ORGANIZATION"), getMyJobs);
 router.get("/download-pdf", requireRole("ORGANIZATION"), downloadJobsPDF);
 router.get("/applications/mine", requireRole("STUDENT"), getMyApplications);
@@ -32,5 +37,12 @@ router.post("/:id/apply", requireRole("STUDENT"), uploadStudentCv, applyToJob);
 router.post("/", requireRole("ORGANIZATION"), createJob);
 router.put("/:id", requireRole("ORGANIZATION"), updateJob);
 router.delete("/:id", requireRole("ORGANIZATION"), deleteJob);
+
+// Org — applicant management
+router.get("/:id/applicants", requireRole("ORGANIZATION"), getJobApplicants);
+router.patch("/:id/applicants/:appId", requireRole("ORGANIZATION"), updateApplicantStatus);
+
+// Public job detail (must be last to not conflict with other routes)
+router.get("/:id", getJob);
 
 export default router;

@@ -11,3 +11,9 @@ export const api = axios.create({
 //   if (token) config.headers.Authorization = `Bearer ${token}`;
 //   return config;
 // });
+
+// Simulation APIs
+export const simulationApi = {
+  start: (moduleCode) => api.post('/api/simulations/start', { moduleCode }),
+  submit: (attemptId, answers) => api.post(`/api/simulations/${attemptId}/submit`, { answers })
+};
