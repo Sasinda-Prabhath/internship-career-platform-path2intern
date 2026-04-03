@@ -32,6 +32,7 @@ import QuestionBankPage from "./pages/module/QuestionBankPage";
 import QuizPage from "./pages/quiz/QuizPage";
 import ResumePage from "./pages/ResumePage";
 import MyApplicationsPage from "./pages/student/MyApplicationsPage";
+import SimulationRunner from "./pages/SimulationRunner";
 
 // University Admin pages
 import StaffManagementPage from "./pages/staff/StaffManagementPage";
@@ -120,6 +121,7 @@ function App() {
           <Route path="/module/question-bank" element={<DashboardRoute allowedRoles={["MODULE_MANAGER", "MODULE_OPERATOR"]}><QuestionBankPage /></DashboardRoute>} />
           <Route path="/quiz" element={<DashboardRoute allowedRoles={["STUDENT"]}><QuizPage /></DashboardRoute>} />
           <Route path="/resume-builder" element={<DashboardRoute allowedRoles={["STUDENT"]}><ResumePage /></DashboardRoute>} />
+          <Route path="/simulation" element={<DashboardRoute allowedRoles={["STUDENT"]}><SimulationRunner /></DashboardRoute>} />
           <Route path="/dashboard/portfolio" element={<DashboardRoute allowedRoles={["STUDENT"]}><PortfolioEditorPage /></DashboardRoute>} />
           <Route path="/portfolio-builder" element={<DashboardRoute allowedRoles={["STUDENT"]}><PortfolioEditorPage /></DashboardRoute>} />
           <Route path="/student/my-applications" element={<DashboardRoute allowedRoles={["STUDENT"]}><MyApplicationsPage /></DashboardRoute>} />
