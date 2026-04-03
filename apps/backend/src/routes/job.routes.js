@@ -20,6 +20,13 @@ const router = Router();
 // Public — anyone can browse jobs
 router.get("/", getJobs);
 
+// Org-only routes
+// Important: /mine MUST be defined before /:id so it doesn't get swallowed
+router.get("/mine", requireAuth, requireRole("ORGANIZATION"), getMyJobs);
+
+router.get("/:id", getJobById);
+
+router.use(requireAuth);
 // Auth required for all routes below
 router.use(requireAuth);
 

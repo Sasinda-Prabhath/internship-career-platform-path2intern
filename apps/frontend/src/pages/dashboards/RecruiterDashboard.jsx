@@ -38,6 +38,9 @@ const JobRow = ({ job, currentTime }) => {
                 <p className="text-xs text-gray-400">{job.location} · {job.type}</p>
             </div>
             <div className="flex items-center gap-2 flex-shrink-0">
+                <Link to={`/dashboard/recruiter/job/${job._id}/applications`} className="text-xs bg-purple-100 text-purple-700 hover:bg-purple-200 px-2.5 py-1 rounded-lg font-bold transition-colors">
+                    Applicants
+                </Link>
                 <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${WORK_COLORS[job.workMode] || "bg-gray-100 text-gray-600"}`}>
                     {job.workMode}
                 </span>
@@ -84,21 +87,27 @@ export default function OrgDashboard() {
     const [jobs, setJobs] = useState([]);
     const [applications, setApplications] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [appStats, setAppStats] = useState({ total: 0, shortlisted: 0 });
     const currentTime = Date.now();
 
-    const fetchJobs = useCallback(async () => {
+    const fetchJobsAndStats = useCallback(async () => {
         try {
-            const [jobsRes, applicationsRes] = await Promise.all([
+            const [jobsRes, appsRes] = await Promise.all([
                 api.get("/api/jobs/mine"),
-                api.get("/api/jobs/applications/received"),
+                api.get("/api/applications/org")
             ]);
             setJobs(jobsRes.data.jobs || []);
-            setApplications(applicationsRes.data.applications || []);
+            
+            const apps = appsRes.data.applications || [];
+            setAppStats({
+                total: apps.length,
+                shortlisted: apps.filter(a => a.status === "Shortlisted").length
+            });
         } catch { /* ignore */ }
         finally { setLoading(false); }
     }, []);
 
-    useEffect(() => { fetchJobs(); }, [fetchJobs]);
+    useEffect(() => { fetchJobsAndStats(); }, [fetchJobsAndStats]);
 
     const activeJobs = jobs.filter(j => j.status === "active");
     const submittedApplications = applications.filter((application) => application.status === "submitted");
@@ -145,18 +154,18 @@ export default function OrgDashboard() {
                         sub="Since account created"
                     />
                     <StatCard
-                        label="ApplicationsS"
-                        value={loading ? "—" : applications.length}
+                        label="Applications"
+                        value={loading ? "—" : appStats.total}
                         icon="📝"
                         accent={{ bg: "bg-amber-50", text: "text-amber-600" }}
-                        sub={loading ? "Loading..." : `${submittedApplications.length} awaiting review`}
+                        sub="Across all jobs"
                     />
                     <StatCard
                         label="Shortlisted"
-                        value={loading ? "—" : shortlistedApplications.length}
+                        value={loading ? "—" : appStats.shortlisted}
                         icon="⭐"
                         accent={{ bg: "bg-purple-50", text: "text-purple-600" }}
-                        sub={loading ? "Loading..." : "Candidates ready for follow-up"}
+                        sub="Promising candidates"
                     />
                 </div>
 

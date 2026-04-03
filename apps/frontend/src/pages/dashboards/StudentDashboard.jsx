@@ -43,31 +43,33 @@ const DarkActionCard = ({ to, icon, title, description, disabled }) => (
 );
 
 export default function StudentDashboard() {
-    const { user } = useAuth();
-    const [applications, setApplications] = useState([]);
+    const { user, updateUser } = useAuth();
+    const [stats, setStats] = useState({ sent: 0, shortlisted: 0 });
+
+    const handleDeleteCv = async () => {
+        if (!window.confirm("Are you sure you want to delete your CV?")) return;
+        try {
+            await api.delete("/api/applications/cv");
+            updateUser({ cvFilename: null, cvText: null });
+        } catch (err) {
+            alert("Failed to delete CV");
+        }
+    };
 
     useEffect(() => {
-        api.get("/api/jobs/applications/mine")
-            .then(({ data }) => setApplications(data.applications))
-            .catch(() => {});
-    }, []);
-
-    const shortlisted = applications.filter((a) => a.status === "shortlisted").length;
-    const [jobs, setJobs] = useState([]);
-    const [jobsLoading, setJobsLoading] = useState(true);
-
-    useEffect(() => {
-        const fetchJobs = async () => {
+        const fetchStats = async () => {
             try {
-                const res = await api.get("/api/jobs?type=Internship");
-                setJobs(res.data.jobs?.slice(0, 6) || []); // Show latest 6 internships
-            } catch (e) {
-                setJobs([]);
-            } finally {
-                setJobsLoading(false);
+                const res = await api.get("/api/applications/mine");
+                const apps = res.data.applications || [];
+                setStats({
+                    sent: apps.length,
+                    shortlisted: apps.filter(a => a.status === "Shortlisted").length
+                });
+            } catch (err) {
+                // Ignore API error
             }
         };
-        fetchJobs();
+        fetchStats();
     }, []);
 
     return (
@@ -90,8 +92,8 @@ export default function StudentDashboard() {
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
                 {/* Stats */}
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
-                    <StatCard label="Applications Sent" value={applications.length} icon="📨" accent="text-blue-400" />
-                    <StatCard label="Shortlisted" value={shortlisted} icon="⭐" accent="text-indigo-400" />
+                    <StatCard label="Applications Sent" value={stats.sent} icon="📨" accent="text-blue-400" />
+                    <StatCard label="Shortlisted" value={stats.shortlisted} icon="⭐" accent="text-indigo-400" />
                     <StatCard label="Quizzes Done" value="0" icon="🧠" accent="text-violet-400" />
                     <StatCard label="Modules Progress" value="0%" icon="📈" accent="text-purple-400" />
                 </div>
@@ -158,10 +160,40 @@ export default function StudentDashboard() {
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <DarkActionCard to="/" icon="🔍" title="Browse Internships" description="Explore the latest internship opportunities from verified companies." />
                                 <DarkActionCard to="/quiz" icon="🧠" title="Take a Quiz" description="Test your knowledge across your module areas." />
-                                <DarkActionCard to="/student/my-applications" icon="📝" title="My Applications" description="Track all internship applications you've submitted." />
-                                <DarkActionCard to="/simulation" icon="🎯" title="Interview Simulation" description="Practice with AI-generated interview questions for your modules." />
-                                <DarkActionCard to="#" icon="📝" title="My Applications" description="Track all internship applications you've submitted." disabled />
-                                <DarkActionCard to="#" icon="👤" title="Update Profile" description="Keep your profile and resume up to date for recruiters." disabled />
+                                <DarkActionCard to="/dashboard/student/applications" icon="📝" title="My Applications" description="Track all internship applications you've submitted to see their statuses." />
+                                <DarkActionCard to="/dashboard/student/cv-upload" icon="📄" title="Manage CV" description="Upload or replace your CV to get updated intelligent match rates for every job." />
+                            </div>
+                        </div>
+
+                        <div>
+                            <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-widest mb-5">My Resume / CV</h2>
+                            <div className="bg-white border border-gray-200 rounded-2xl p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                                {user?.cvFilename ? (
+                                    <>
+                                        <div className="flex items-center gap-3">
+                                            <div className="text-3xl">📄</div>
+                                            <div>
+                                                <p className="font-semibold text-gray-900">{user.cvFilename}</p>
+                                                <p className="text-xs text-gray-500">Active for matching</p>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <Link to="/dashboard/student/cv-upload" className="text-sm px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 text-gray-700 font-medium transition-colors">Replace</Link>
+                                            <button onClick={handleDeleteCv} className="text-sm px-4 py-2 border border-red-200 rounded-lg hover:bg-red-50 text-red-600 font-medium transition-colors">Delete</button>
+                                        </div>
+                                    </>
+                                ) : (
+                                    <>
+                                        <div className="flex items-center gap-3 opacity-60">
+                                            <div className="text-3xl">📤</div>
+                                            <div>
+                                                <p className="font-semibold text-gray-900">No CV Uploaded</p>
+                                                <p className="text-xs text-gray-500">Upload one to see match rates</p>
+                                            </div>
+                                        </div>
+                                        <Link to="/dashboard/student/cv-upload" className="text-sm px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition-colors text-center">Upload CV</Link>
+                                    </>
+                                )}
                             </div>
                         </div>
 

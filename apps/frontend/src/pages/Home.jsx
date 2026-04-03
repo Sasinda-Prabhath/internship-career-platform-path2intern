@@ -21,9 +21,42 @@ const logoColor = (name) => LOGO_COLORS[(name?.charCodeAt(0) || 0) % LOGO_COLORS
 const hasDeadlinePassed = (deadline) => deadline && new Date(deadline).getTime() < Date.now();
 
 /* ── Job card ────────────────────────────────────────────────────────────── */
+function JobCard({ job, cvData }) {
 function JobCard({ job, index }) {
 function JobCard({ job, onViewApply, applyLabel = "View & Apply", applyDisabled = false }) {
   const initials = (job.company || "?").split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase();
+  
+  let matchBadge = null;
+  if (cvData && job.skills?.length > 0) {
+      const text = cvData.text.toLowerCase();
+      const missing = job.skills.filter(s => {
+          const skill = s.trim();
+          const escapedSkill = skill.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+          const regex = new RegExp(`(^|\\W)${escapedSkill}(\\W|$)`, 'i');
+          return !regex.test(text);
+      });
+      const matched = job.skills.length - missing.length;
+      const matchPercentage = Math.round((matched / job.skills.length) * 100);
+      
+      let badgeClass = "bg-green-100 text-green-700";
+      if (matchPercentage < 50) badgeClass = "bg-red-100 text-red-700";
+      else if (matchPercentage < 80) badgeClass = "bg-orange-100 text-orange-700";
+      
+      matchBadge = (
+          <div className="mt-2 flex items-center justify-between border-t border-gray-100 pt-3">
+              <span className="text-xs font-semibold text-gray-500">CV Suitability:</span>
+              <span className={`text-xs px-2 py-0.5 rounded-md font-bold ${badgeClass}`}>{matchPercentage}% Match</span>
+          </div>
+      );
+  } else if (cvData) {
+      matchBadge = (
+          <div className="mt-2 flex items-center justify-between border-t border-gray-100 pt-3">
+              <span className="text-xs font-semibold text-gray-500">CV Suitability:</span>
+              <span className="text-xs px-2 py-0.5 rounded-md font-bold bg-green-100 text-green-700">100% Match</span>
+          </div>
+      );
+  }
+
   return (
     <div className={`bg-white border border-gray-200 rounded-2xl p-5 card-lift flex flex-col gap-3 animate-fadeInUp`} style={{ animationDelay: `${index * 50}ms` }}>
       <div className="flex items-start gap-3">
@@ -263,12 +296,59 @@ function ContactForm() {
 
 /* ── Main component ──────────────────────────────────────────────────────── */
 export default function Home() {
-  const { user, loading: authLoading, logout } = useAuth();
+  const { user, loading: authLoading, logout, updateUser } = useAuth();
   const [jobs, setJobs] = useState([]);
   const [jobsLoading, setJobsLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [workMode, setWorkMode] = useState("");
   const [type, setType] = useState("");
+  
+  const [showCvModal, setShowCvModal] = useState(false);
+  const [cvData, setCvData] = useState(null);
+  const [cvFile, setCvFile] = useState(null);
+  const [cvLoading, setCvLoading] = useState(false);
+  const [cvError, setCvError] = useState("");
+
+  useEffect(() => {
+    if (user && user.cvText) {
+        setCvData({ filename: user.cvFilename, text: user.cvText });
+    } else if (user?.globalRole === "STUDENT" && !sessionStorage.getItem("skipped_cv")) {
+        const t = setTimeout(() => setShowCvModal(true), 1500);
+        return () => clearTimeout(t);
+    } else {
+        setCvData(null);
+    }
+  }, [user]);
+
+  const handleSkipCv = () => {
+      sessionStorage.setItem("skipped_cv", "true");
+      setShowCvModal(false);
+  };
+
+  const handleUploadCv = async (e) => {
+      e.preventDefault();
+      if (!cvFile) { setCvError("Please select a PDF file."); return; }
+      setCvLoading(true); setCvError("");
+      
+      const formData = new FormData();
+      formData.append("resume", cvFile);
+
+      try {
+          const res = await api.post("/api/applications/parse-cv", formData, {
+              headers: { "Content-Type": "multipart/form-data" }
+          });
+          const newData = { filename: res.data.filename, text: res.data.cvText };
+          if (user) {
+              updateUser({ cvFilename: newData.filename, cvText: newData.text });
+          }
+          setCvData(newData);
+          setShowCvModal(false);
+      } catch (err) {
+          setCvError(err.response?.data?.message || "Failed to process CV.");
+      } finally {
+          setCvLoading(false);
+      }
+  };
   const [selectedJob, setSelectedJob] = useState(null);
   const [appliedJobIds, setAppliedJobIds] = useState([]);
 
@@ -350,34 +430,49 @@ export default function Home() {
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-              {jobs.map((job, index) => <JobCard key={job._id} job={job} index={index} />)}
+              {jobs.map((job) => <JobCard key={job._id} job={job} cvData={cvData} />)}
             </div>
           )}
         </main>
-        <footer className="border-t border-gray-200 py-6 text-center bg-white shadow-sm">
-              {jobs.map((job) => {
-                const alreadyApplied = appliedJobIds.includes(job._id);
-                const deadlinePassed = hasDeadlinePassed(job.deadline);
-                const applyDisabled = !isStudent || alreadyApplied || deadlinePassed;
-                let applyLabel = "View & Apply";
-                if (!isStudent) applyLabel = "Students only";
-                else if (deadlinePassed) applyLabel = "Applications closed";
-                else if (alreadyApplied) applyLabel = "Applied";
+        {/* CV Upload Modal */}
+        {showCvModal && (
+            <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                <div className="bg-white rounded-3xl w-full max-w-md overflow-hidden shadow-2xl relative animate-[fadeIn_0.2s_ease-out]">
+                    <div className="bg-gradient-to-br from-blue-600 to-indigo-600 p-8 text-white relative">
+                        <h2 className="text-2xl font-bold mb-2">Upload Your CV 📄</h2>
+                        <p className="text-blue-100 text-sm">See exactly how well you match with internships instantly!</p>
+                        <button onClick={handleSkipCv} className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-full bg-white/20 hover:bg-white/30 transition-colors">✕</button>
+                    </div>
+                    <form onSubmit={handleUploadCv} className="p-8 space-y-6">
+                        {cvError && <div className="text-red-500 text-sm bg-red-100 p-3 rounded-xl border border-red-200">{cvError}</div>}
+                        <div className="relative group">
+                            <input type="file" accept="application/pdf" onChange={(e) => setCvFile(e.target.files[0])} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
+                            <div className={`border-2 border-dashed rounded-2xl p-6 text-center transition-all ${cvFile ? "border-green-500 bg-green-50" : "border-gray-300 bg-gray-50 group-hover:border-blue-500 group-hover:bg-blue-50"}`}>
+                                {cvFile ? (
+                                    <>
+                                        <p className="text-2xl mb-2">✅</p>
+                                        <p className="text-green-700 font-semibold">{cvFile.name}</p>
+                                    </>
+                                ) : (
+                                    <>
+                                        <p className="text-3xl mb-2 text-blue-500">📤</p>
+                                        <p className="text-blue-600 font-medium">Click to select PDF</p>
+                                        <p className="text-gray-400 text-xs mt-1">Maximum size: 10MB</p>
+                                    </>
+                                )}
+                            </div>
+                        </div>
+                        <div className="flex gap-3">
+                            <button type="button" onClick={handleSkipCv} className="flex-1 py-3 bg-gray-100 text-gray-700 font-semibold rounded-xl hover:bg-gray-200 transition-colors">Skip</button>
+                            <button type="submit" disabled={!cvFile || cvLoading} className="flex-1 py-3 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg shadow-blue-600/20">
+                                {cvLoading ? "Analyzing..." : "Analyze Match"}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        )}
 
-                return (
-                  <JobCard
-                    key={job._id}
-                    job={job}
-                    onViewApply={setSelectedJob}
-                    applyDisabled={applyDisabled}
-                    applyLabel={applyLabel}
-                  />
-                );
-              })}
-            </div>
-          )}
-        </main>
-        <ApplyJobModal job={selectedJob} onClose={() => setSelectedJob(null)} onApplied={markApplied} />
         <footer className="border-t border-gray-200 py-6 text-center bg-white">
           <p className="text-gray-400 text-sm">© {new Date().getFullYear()} Path2Intern. All rights reserved.</p>
         </footer>

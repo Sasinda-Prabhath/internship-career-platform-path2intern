@@ -8,28 +8,39 @@ const applicationSchema = new mongoose.Schema(
             ref: "Job",
             required: true,
         },
+        applicant: {
         student: {
         studentId: {
             type: mongoose.Schema.Types.ObjectId,
             ref: "User",
             required: true,
         },
-        organization: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: "User",
-            required: true,
-        },
-        cvUrl: { type: String, required: true },
-        cvOriginalName: { type: String, required: true },
         status: {
             type: String,
-            enum: ["submitted", "shortlisted", "rejected"],
-            default: "submitted",
+            enum: ["Pending", "Shortlisted", "Rejected"],
+            default: "Pending",
         },
+        notes: {
+            type: String,
+            default: "", // For organizations to leave internal notes if they want
+        },
+        resumeUrl: {
+            type: String,
+            required: true,
+        },
+        matchPercentage: {
+            type: Number,
+            default: 0,
+        },
+        missingSkills: {
+            type: [String],
+            default: [],
+        }
     },
     { timestamps: true }
 );
 
-applicationSchema.index({ job: 1, student: 1 }, { unique: true });
+// Prevent duplicate applications from the same student for the same job
+applicationSchema.index({ job: 1, applicant: 1 }, { unique: true });
 
 export const Application = mongoose.model("Application", applicationSchema);

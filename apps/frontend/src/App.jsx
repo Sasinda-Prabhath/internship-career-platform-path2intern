@@ -7,6 +7,7 @@ import DashboardLayout from "./components/DashboardLayout";
 
 // Public pages
 import Home from "./pages/Home";
+import JobDetails from "./pages/JobDetails";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Profile from "./pages/Profile";
@@ -39,6 +40,10 @@ import ContactsPage from "./pages/admin/ContactsPage";
 
 // Organisation pages
 import PostJobPage from "./pages/org/PostJobPage";
+import JobApplicationsPage from "./pages/org/JobApplicationsPage";
+
+import StudentApplications from "./pages/dashboards/StudentApplications";
+import CVGateway from "./pages/dashboards/CVGateway";
 import ReviewApplicationsPage from "./pages/org/ReviewApplicationsPage";
 import JobListingsPage from "./pages/org/JobListingsPage";
 import ManageApplicantsPage from "./pages/org/ManageApplicantsPage";
@@ -63,6 +68,7 @@ function App() {
         <Routes>
           {/* ── Public ─────────────────────────────────────────── */}
           <Route path="/" element={<Home />} />
+          <Route path="/jobs/:id" element={<JobDetails />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
 
@@ -87,6 +93,7 @@ function App() {
           <Route path="/dashboard/university-admin" element={<DashboardRoute allowedRoles={["UNIVERSITY_ADMIN"]}><UniversityAdminDashboard /></DashboardRoute>} />
           <Route path="/dashboard/recruiter" element={<DashboardRoute allowedRoles={["ORGANIZATION", "RECRUITER"]}><RecruiterDashboard /></DashboardRoute>} />
           <Route path="/dashboard/student" element={<DashboardRoute allowedRoles={["STUDENT"]}><StudentDashboard /></DashboardRoute>} />
+          <Route path="/dashboard/student/cv-upload" element={<ProtectedRoute allowedRoles={["STUDENT"]}><CVGateway /></ProtectedRoute>} />
           <Route path="/dashboard/module-manager" element={<DashboardRoute allowedRoles={["MODULE_MANAGER"]}><ModuleManagerDashboard /></DashboardRoute>} />
           <Route path="/dashboard/module-operator" element={<DashboardRoute allowedRoles={["MODULE_OPERATOR"]}><ModuleOperatorDashboard /></DashboardRoute>} />
 
@@ -118,6 +125,8 @@ function App() {
           <Route path="/org/applicants/:jobId" element={<DashboardRoute allowedRoles={["ORGANIZATION", "RECRUITER"]}><ManageApplicantsPage /></DashboardRoute>} />
           <Route path="/admin/org-approvals" element={<DashboardRoute allowedRoles={["UNIVERSITY_ADMIN", "SYSTEM_ADMIN"]}><OrgApprovalsPage /></DashboardRoute>} />
           <Route path="/admin/contacts" element={<DashboardRoute allowedRoles={["SYSTEM_ADMIN"]}><ContactsPage /></DashboardRoute>} />
+          <Route path="/dashboard/student/applications" element={<DashboardRoute allowedRoles={["STUDENT"]}><StudentApplications /></DashboardRoute>} />
+          <Route path="/dashboard/recruiter/job/:id/applications" element={<DashboardRoute allowedRoles={["ORGANIZATION", "RECRUITER"]}><JobApplicationsPage /></DashboardRoute>} />
         </Routes>
       </div>
     </Router>
