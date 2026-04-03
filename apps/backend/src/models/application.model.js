@@ -2,29 +2,34 @@ import mongoose from "mongoose";
 
 const applicationSchema = new mongoose.Schema(
     {
+        job: {
         jobId: {
             type: mongoose.Schema.Types.ObjectId,
             ref: "Job",
             required: true,
         },
+        student: {
         studentId: {
             type: mongoose.Schema.Types.ObjectId,
             ref: "User",
             required: true,
         },
+        organization: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "User",
+            required: true,
+        },
+        cvUrl: { type: String, required: true },
+        cvOriginalName: { type: String, required: true },
         status: {
             type: String,
-            enum: ["Pending", "Accepted", "Rejected"],
-            default: "Pending",
+            enum: ["submitted", "shortlisted", "rejected"],
+            default: "submitted",
         },
-        cvUrl: { type: String, default: null }, // path to uploaded CV
-        coverLetter: { type: String, default: "" },
-        appliedAt: { type: Date, default: Date.now },
     },
     { timestamps: true }
 );
 
-// A student can only apply once per job
-applicationSchema.index({ jobId: 1, studentId: 1 }, { unique: true });
+applicationSchema.index({ job: 1, student: 1 }, { unique: true });
 
 export const Application = mongoose.model("Application", applicationSchema);
