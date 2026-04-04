@@ -64,6 +64,7 @@ const NAV = {
             { label: "My Applications", to: "/student/my-applications", icon: "users" },
             { label: "Browse Internships", to: "/", icon: "search" },
             { label: "Take a Quiz", to: "/quiz", icon: "quiz" },
+            { label: "Interview Simulation", to: "/simulation", icon: "target" },
             { label: "Build your resume", to: "/resume-builder", icon: "book" },
             { label: "Build your portfolio", to: "/dashboard/portfolio", icon: "book" },
         ],

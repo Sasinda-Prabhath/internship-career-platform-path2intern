@@ -177,6 +177,7 @@ export default function StudentDashboard() {
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <DarkActionCard to="/" icon="🔍" title="Browse Internships" description="Explore the latest internship opportunities from verified companies." />
                                 <DarkActionCard to="/quiz" icon="🧠" title="Take a Quiz" description="Test your knowledge across your module areas." />
+                                <DarkActionCard to="/simulation" icon="🎯" title="Interview Simulation" description="Practice with AI-generated interview questions for your modules." />
                                 <DarkActionCard to="/dashboard/student/applications" icon="📝" title="My Applications" description="Track all internship applications you've submitted to see their statuses." />
                                 <DarkActionCard to="/dashboard/student/cv-upload" icon="📄" title="Manage CV" description="Upload or replace your CV to get updated intelligent match rates for every job." />
                             </div>
