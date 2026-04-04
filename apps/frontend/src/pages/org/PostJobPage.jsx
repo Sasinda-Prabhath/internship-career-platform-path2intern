@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { toast } from "react-toastify";
-import { useState, useEffect } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 import { api } from "../../services/api";
@@ -191,14 +190,9 @@ function validateForm(form) {
 
 export default function PostJobPage() {
     const { user } = useAuth();
-    const [jobs, setJobs] = useState([]);
-    const [loading, setLoading] = useState(false);
+    const { jobId } = useParams();
     const [formLoading, setFormLoading] = useState(false);
-    const [form, setForm] = useState(emptyForm);
-    const [editingId, setEditingId] = useState(null);
-    const [deleteId, setDeleteId] = useState(null);
-    const [deleting, setDeleting] = useState(false);
-    const [showForm, setShowForm] = useState(false);
+    const [form, setForm] = useState(buildEmptyForm(user?.organizationName || ""));
     const [touched, setTouched] = useState({});
     const [submitAttempted, setSubmitAttempted] = useState(false);
 
@@ -212,22 +206,36 @@ export default function PostJobPage() {
         return typeof val === "string" ? val.trim().length > 0 : false;
     };
 
-    const fetchJobs = useCallback(async () => {
-        setLoading(true);
-        try {
-            const res = await api.get("/api/jobs/mine");
-            setJobs(res.data.jobs || []);
-        } catch (e) {
-            toast.error(e.response?.data?.message || "Failed to load jobs");
-        } finally { setLoading(false); }
-    }, []);
- 
-  const { jobId } = useParams();
-
-  const [formLoading, setFormLoading] = useState(false);
-  const [form, setForm] = useState(buildEmptyForm());
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
+    useEffect(() => {
+        if (jobId) {
+            const loadJob = async () => {
+                try {
+                    const res = await api.get(`/api/jobs/${jobId}`);
+                    const job = res.data.job || res.data; // Accommodate backend variations
+                    setForm({
+                        title: job.title ?? "",
+                        description: job.description ?? "",
+                        company: job.company ?? user?.organizationName ?? "",
+                        province: job.province || "",
+                        district: job.district || "",
+                        workMode: job.workMode || "Hybrid",
+                        type: job.type || "Internship",
+                        duration: job.duration || "",
+                        salaryMin: job.salaryMin ?? "",
+                        salaryMax: job.salaryMax ?? "",
+                        salaryCurrency: job.salaryCurrency || "LKR",
+                        salaryPeriod: job.salaryPeriod || "month",
+                        skills: Array.isArray(job.skills) ? job.skills.join(", ") : (job.skills ?? ""),
+                        requirements: job.requirements || "",
+                        deadline: job.deadline ? job.deadline.slice(0, 10) : "",
+                    });
+                } catch (e) {
+                    toast.error("Failed to load job details.");
+                }
+            };
+            loadJob();
+        }
+    }, [jobId, user]);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -242,23 +250,15 @@ export default function PostJobPage() {
             const salaryMinNumber = Number(form.salaryMin);
             const salaryMaxNumber = Number(form.salaryMax);
 
-            if (salaryMinNumber < 0) {
-                throw new Error("Minimum salary must be 0 or greater.");
-            }
-            if (salaryMaxNumber < 0) {
-                throw new Error("Maximum salary must be 0 or greater.");
-            }
-            if (salaryMaxNumber <= salaryMinNumber) {
-                throw new Error("Maximum salary must be greater than minimum salary.");
-            }
+            if (salaryMinNumber < 0) throw new Error("Minimum salary must be 0 or greater.");
+            if (salaryMaxNumber < 0) throw new Error("Maximum salary must be 0 or greater.");
+            if (salaryMaxNumber <= salaryMinNumber) throw new Error("Maximum salary must be greater than minimum salary.");
 
             if (form.deadline) {
                 const selectedDate = new Date(form.deadline);
                 const today = new Date();
                 today.setHours(0, 0, 0, 0);
-                if (selectedDate < today) {
-                    throw new Error("Application deadline cannot be in the past.");
-                }
+                if (selectedDate < today) throw new Error("Application deadline cannot be in the past.");
             }
 
             const payload = {
@@ -273,354 +273,162 @@ export default function PostJobPage() {
                 salaryMin: salaryMinNumber,
                 salaryMax: salaryMaxNumber,
             };
-            if (editingId) {
-                await api.put(`/api/jobs/${editingId}`, payload);
+
+            if (jobId) {
+                await api.put(`/api/jobs/${jobId}`, payload);
                 toast.success("Job updated successfully.");
             } else {
                 await api.post("/api/jobs", payload);
-                toast.success("Job posted! It will appear on the home page. You can edit within 2 minutes.");
+                toast.success("Job posted! You can edit within 2 minutes.");
+                setForm(buildEmptyForm(user?.organizationName || ""));
+                setTouched({});
+                setSubmitAttempted(false);
             }
-            setForm(emptyForm); setEditingId(null); setShowForm(false); setTouched({}); setSubmitAttempted(false); fetchJobs();
-        } catch (e) { toast.error(e.response?.data?.message || e.message || "Failed to save job"); }
-        finally { setFormLoading(false); }
-    };
-
-    const startEdit = (job) => {
-        setForm({
-            title: job.title, description: job.description || "", company: job.company,
-            province: job.province || "", district: job.district || "",
-            workMode: job.workMode, type: "Internship",
-  const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
-  const districts = form.province ? SL_PROVINCES[form.province] || [] : [];
-
-  useEffect(() => {
-    if (jobId) {
-      const loadJob = async () => {
-        try {
-          const res = await api.get(`/api/jobs/${jobId}`);
-          const job = res.data;
-
-          setForm({
-            title: job.title ?? "",
-            description: job.description ?? "",
-            company: job.company ?? user?.organizationName ?? "",
-            province: job.province || "",
-            district: job.district || "",
-            workMode: job.workMode || "Hybrid",
-            type: job.type || "Internship",
-            duration: job.duration || "",
-            salaryMin: job.salaryMin ?? "",
-            salaryMax: job.salaryMax ?? "",
-            salaryCurrency: job.salaryCurrency || "LKR",
-            salaryPeriod: job.salaryPeriod || "month",
-            skills: Array.isArray(job.skills) ? job.skills.join(", ") : (job.skills ?? ""),
-            requirements: job.requirements || "",
-            deadline: job.deadline ? job.deadline.slice(0, 10) : "",
-        });
-        setEditingId(job._id); setShowForm(true); setTouched({}); setSubmitAttempted(false);
-        window.scrollTo({ top: 0, behavior: "smooth" });
-    };
-
-    const cancelForm = () => { setForm(emptyForm); setEditingId(null); setShowForm(false); setTouched({}); setSubmitAttempted(false); };
-
-    const handleDelete = async () => {
-        setDeleting(true);
-        try {
-            await api.delete(`/api/jobs/${deleteId}`);
-            setJobs((js) => js.filter((j) => j._id !== deleteId)); setDeleteId(null);
-            toast.success("Job deleted successfully.");
-        } catch (e) { toast.error(e.response?.data?.message || "Failed to delete"); }
-        finally { setDeleting(false); }
+            window.scrollTo({ top: 0, behavior: "smooth" });
+        } catch (e) {
+            toast.error(e.response?.data?.message || e.message || "Failed to save job");
+        } finally {
+            setFormLoading(false);
+        }
     };
 
     return (
-        <div className="min-h-screen bg-gray-50">
-            {/* Page header */}
-            <div className="bg-white border-b border-gray-200 px-8 py-8">
+        <div className="min-h-screen bg-gray-50 pb-16">
+            <div className="bg-white border-b border-gray-200 px-8 py-8 mb-8">
                 <div className="max-w-5xl mx-auto flex items-start justify-between gap-4 flex-wrap">
                     <div>
                         <span className="bg-green-100 text-green-700 text-xs font-semibold px-2.5 py-1 rounded-full border border-green-200 uppercase tracking-wider">Organisation</span>
-                        <h1 className="text-3xl font-bold text-gray-900 mt-2">Job Postings</h1>
-                        <p className="text-gray-500 mt-1 text-sm">Post internships to reach SLIIT students. Edit within 2 minutes of posting.</p>
+                        <h1 className="text-3xl font-bold text-gray-900 mt-2">{jobId ? "Edit Job Post" : "Post a New Job"}</h1>
+                        <p className="text-gray-500 mt-1 text-sm">Post internships to reach SLIIT students. Fill out the details below.</p>
                     </div>
-                    {!showForm && (
-                        <button onClick={() => { setShowForm(true); setForm(emptyForm); setEditingId(null); setTouched({}); setSubmitAttempted(false); }}
-                            className="flex-shrink-0 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold px-5 py-2.5 rounded-xl transition-colors shadow-sm mt-1">
-                            + Post a Job
-                        </button>
-                    )}
+                    <Link to="/org/job-listings" className="flex-shrink-0 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-semibold px-5 py-2.5 rounded-xl transition-colors shadow-sm mt-1">
+                        ← Back to Listings
+                    </Link>
                 </div>
             </div>
 
-            <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
-                {/* Post / Edit form */}
-                {showForm && (
-                    <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
-                        <div className="flex items-center justify-between mb-6">
-                            <h2 className="text-lg font-bold text-gray-900">{editingId ? "Edit Job Post" : "New Job Post"}</h2>
-                            <button onClick={cancelForm} className="text-gray-400 hover:text-gray-600 transition-colors text-xl leading-none">✕</button>
+            <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div className="bg-white border border-gray-200 rounded-2xl p-6 md:p-8 shadow-sm">
+                    <form onSubmit={handleSubmit} className="space-y-6">
+                        {/* Row 1: title + company */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                            <div>
+                                <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">Job Title *</label>
+                                <input required value={form.title} onChange={set("title")} onBlur={markTouched("title")} className={inp} placeholder="e.g. Software Engineering Intern" />
+                                {showError("title") && validationErrors.title && <p className="mt-1 text-xs text-red-600">{validationErrors.title}</p>}
+                            </div>
+                            <div>
+                                <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">Company *</label>
+                                <input required value={form.company} onChange={set("company")} onBlur={markTouched("company")} className={inp} placeholder="Your company name" />
+                                {showError("company") && validationErrors.company && <p className="mt-1 text-xs text-red-600">{validationErrors.company}</p>}
+                            </div>
                         </div>
-                        <form onSubmit={handleSubmit} className="space-y-5">
-                            {/* Row 1: title + company */}
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                <div>
-                                    <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">Job Title *</label>
-                                    <input required value={form.title} onChange={set("title")} onBlur={markTouched("title")} className={inp} placeholder="e.g. Software Engineering Intern" />
-                                    {showError("title") && validationErrors.title && <p className="mt-1 text-xs text-red-600">{validationErrors.title}</p>}
-                                </div>
-                                <div>
-                                    <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">Company *</label>
-                                    <input required value={form.company} onChange={set("company")} onBlur={markTouched("company")} className={inp} placeholder="Your company name" />
-                                    {showError("company") && validationErrors.company && <p className="mt-1 text-xs text-red-600">{validationErrors.company}</p>}
-                                </div>
-                            </div>
 
-                            {/* Row 2: Province + District */}
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                <div>
-                                    <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">Province *</label>
-                                    <select required value={form.province} onChange={(e) => { setForm(f => ({ ...f, province: e.target.value, district: "" })); }} className={selCls}>
-                                        <option value="">Select Province</option>
-                                        {Object.keys(SL_PROVINCES).map(p => <option key={p}>{p}</option>)}
-                                    </select>
-                                </div>
-                                <div>
-                                    <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">District *</label>
-                                    <select required value={form.district} onChange={set("district")} className={selCls} disabled={!form.province}>
-                                        <option value="">{form.province ? "Select District" : "Select Province first"}</option>
-                                        {districts.map(d => <option key={d}>{d}</option>)}
-                                    </select>
-                                </div>
-                            </div>
-
-                            {/* Row 3: Work Mode + Job Type + Duration */}
-                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                                <div>
-                                    <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">Work Mode</label>
-                                    <select value={form.workMode} onChange={set("workMode")} className={selCls}>
-                                        {WORK_MODES.map(m => <option key={m}>{m}</option>)}
-                                    </select>
-                                </div>
-                                <div>
-                                    <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">Job Type</label>
-                                    <select value={form.type} onChange={set("type")} className={selCls}>
-                                        {JOB_TYPES.map(t => <option key={t}>{t}</option>)}
-                                    </select>
-                                </div>
-                                <div>
-                                    <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">Duration</label>
-                                    <input
-                                        value={form.duration}
-                                        onChange={set("duration")}
-                                        onBlur={markTouched("duration")}
-                                        className={`${inp} ${(showError("duration") && validationErrors.duration) ? "border-red-300 focus:ring-red-500" : ""}`}
-                                        placeholder="e.g. 6 months"
-                                    />
-                                    {showError("duration") && validationErrors.duration && <p className="mt-1 text-xs text-red-600">{validationErrors.duration}</p>}
-                                </div>
-                            </div>
-
-                            {/* Row 4: Salary range */}
+                        {/* Row 2: Province + District */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                             <div>
-                                <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">Salary Range</label>
-                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                                    <div>
-                                        <label className="block text-xs text-gray-400 mb-1">Min</label>
-                                        <input required type="number" min="0" value={form.salaryMin} onChange={set("salaryMin")} onBlur={markTouched("salaryMin")} className={inp} placeholder="25000" />
-                                        {showError("salaryMin") && validationErrors.salaryMin && <p className="mt-1 text-xs text-red-600">{validationErrors.salaryMin}</p>}
-                                    </div>
-                                    <div>
-                                        <label className="block text-xs text-gray-400 mb-1">Max</label>
-                                        <input required type="number" min="0" value={form.salaryMax} onChange={set("salaryMax")} onBlur={markTouched("salaryMax")} className={inp} placeholder="50000" />
-                                        {(showError("salaryMax") || showError("salaryMin")) && validationErrors.salaryMax && <p className="mt-1 text-xs text-red-600">{validationErrors.salaryMax}</p>}
-                                    </div>
-                                    <div>
-                                        <label className="block text-xs text-gray-400 mb-1">Currency</label>
-                                        <select value={form.salaryCurrency} onChange={set("salaryCurrency")} className={selCls}>
-                                            {CURRENCIES.map(c => <option key={c}>{c}</option>)}
-                                        </select>
-                                    </div>
-                                    <div>
-                                        <label className="block text-xs text-gray-400 mb-1">Per</label>
-                                        <select value={form.salaryPeriod} onChange={set("salaryPeriod")} className={selCls}>
-                                            {PERIODS.map(p => <option key={p}>{p}</option>)}
-                                        </select>
-                                    </div>
-                                </div>
+                                <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">Province *</label>
+                                <select required value={form.province} onChange={(e) => { setForm(f => ({ ...f, province: e.target.value, district: "" })); }} className={selCls}>
+                                    <option value="">Select Province</option>
+                                    {Object.keys(SL_PROVINCES).map(p => <option key={p}>{p}</option>)}
+                                </select>
                             </div>
-
-                            {/* Application deadline */}
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                <div>
-                                    <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">Application Deadline</label>
-                                    <input
-                                        type="date"
-                                        min={new Date().toISOString().slice(0, 10)}
-                                        value={form.deadline}
-                                        onChange={set("deadline")}
-                                        className={inp}
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">Skills (comma-separated)</label>
-                                    <input value={form.skills} onChange={set("skills")} onBlur={markTouched("skills")} className={inp} placeholder="React, Node.js, MongoDB" />
-                                    {showError("skills") && validationErrors.skills && <p className="mt-1 text-xs text-red-600">{validationErrors.skills}</p>}
-                                </div>
-                            </div>
-
-                            {/* Description */}
                             <div>
-                                <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">Job Description *</label>
-                                <textarea required rows={4} value={form.description} onChange={set("description")} onBlur={markTouched("description")}
-                                    className={`${inp} resize-none`} placeholder="Describe the role and responsibilities…" />
-                                {showError("description") && validationErrors.description && <p className="mt-1 text-xs text-red-600">{validationErrors.description}</p>}
+                                <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">District *</label>
+                                <select required value={form.district} onChange={set("district")} className={selCls} disabled={!form.province}>
+                                    <option value="">{form.province ? "Select District" : "Select Province first"}</option>
+                                    {districts.map(d => <option key={d}>{d}</option>)}
+                                </select>
                             </div>
+                        </div>
 
-                            {/* Requirements */}
+                        {/* Row 3: Work Mode + Job Type + Duration */}
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
                             <div>
-                                <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">Requirements <span className="text-gray-400 normal-case font-normal">(optional)</span></label>
-                                <textarea rows={3} value={form.requirements} onChange={set("requirements")} onBlur={markTouched("requirements")}
-                                    className={`${inp} resize-none`} placeholder="List any specific requirements, qualifications…" />
-                                {(showError("requirements") || form.requirements.trim().length > 0) && validationErrors.requirements && <p className="mt-1 text-xs text-red-600">{validationErrors.requirements}</p>}
+                                <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">Work Mode</label>
+                                <select value={form.workMode} onChange={set("workMode")} className={selCls}>
+                                    {WORK_MODES.map(m => <option key={m}>{m}</option>)}
+                                </select>
                             </div>
-
-                            <div className="flex gap-3 justify-end pt-2 border-t border-gray-100">
-                                <button type="button" onClick={cancelForm}
-                                    className="border border-gray-300 text-gray-600 px-5 py-2.5 rounded-xl text-sm hover:bg-gray-50 transition-colors">Cancel</button>
-                                <button type="submit" disabled={formLoading}
-                                    className="bg-green-600 hover:bg-green-700 text-white px-6 py-2.5 rounded-xl text-sm font-semibold disabled:opacity-60 transition-colors shadow-sm">
-                                    {formLoading ? "Saving…" : editingId ? "Update Post" : "Post Job"}
-                                </button>
+                            <div>
+                                <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">Job Type</label>
+                                <select value={form.type} onChange={set("type")} className={selCls}>
+                                    {JOB_TYPES.map(t => <option key={t}>{t}</option>)}
+                                </select>
+                                {showError("type") && validationErrors.type && <p className="mt-1 text-xs text-red-600">{validationErrors.type}</p>}
                             </div>
-                        </form>
-                    </div>
-                )}
+                            <div>
+                                <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">Duration</label>
+                                <input value={form.duration} onChange={set("duration")} onBlur={markTouched("duration")} className={`${inp} ${(showError("duration") && validationErrors.duration) ? "border-red-300 focus:ring-red-500" : ""}`} placeholder="e.g. 6 months" />
+                                {showError("duration") && validationErrors.duration && <p className="mt-1 text-xs text-red-600">{validationErrors.duration}</p>}
+                            </div>
+                        </div>
 
-                {/* Job listings */}
-                <div>
-                  <label className="block text-xs text-gray-400 mb-1">Min</label>
-                  <input
-                    type="number"
-                    min="0"
-                    value={form.salaryMin}
-                    onChange={set("salaryMin")}
-                    className={inp}
-                    placeholder="25000"
-                  />
+                        {/* Row 4: Salary range */}
+                        <div>
+                            <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">Salary Range</label>
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                <div>
+                                    <label className="block text-xs text-gray-400 mb-1">Min</label>
+                                    <input required type="number" min="0" value={form.salaryMin} onChange={set("salaryMin")} onBlur={markTouched("salaryMin")} className={inp} placeholder="25000" />
+                                    {showError("salaryMin") && validationErrors.salaryMin && <p className="mt-1 text-xs text-red-600">{validationErrors.salaryMin}</p>}
+                                </div>
+                                <div>
+                                    <label className="block text-xs text-gray-400 mb-1">Max</label>
+                                    <input required type="number" min="0" value={form.salaryMax} onChange={set("salaryMax")} onBlur={markTouched("salaryMax")} className={inp} placeholder="50000" />
+                                    {(showError("salaryMax") || showError("salaryMin")) && validationErrors.salaryMax && <p className="mt-1 text-xs text-red-600">{validationErrors.salaryMax}</p>}
+                                </div>
+                                <div>
+                                    <label className="block text-xs text-gray-400 mb-1">Currency</label>
+                                    <select value={form.salaryCurrency} onChange={set("salaryCurrency")} className={selCls}>
+                                        {CURRENCIES.map(c => <option key={c}>{c}</option>)}
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="block text-xs text-gray-400 mb-1">Per</label>
+                                    <select value={form.salaryPeriod} onChange={set("salaryPeriod")} className={selCls}>
+                                        {PERIODS.map(p => <option key={p}>{p}</option>)}
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Application deadline */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                            <div>
+                                <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">Application Deadline</label>
+                                <input type="date" min={new Date().toISOString().slice(0, 10)} value={form.deadline} onChange={set("deadline")} className={inp} />
+                            </div>
+                            <div>
+                                <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">Skills (comma-separated)</label>
+                                <input value={form.skills} onChange={set("skills")} onBlur={markTouched("skills")} className={inp} placeholder="React, Node.js, MongoDB" />
+                                {showError("skills") && validationErrors.skills && <p className="mt-1 text-xs text-red-600">{validationErrors.skills}</p>}
+                            </div>
+                        </div>
+
+                        {/* Description */}
+                        <div>
+                            <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">Job Description *</label>
+                            <textarea required rows={5} value={form.description} onChange={set("description")} onBlur={markTouched("description")} className={`${inp} resize-none`} placeholder="Describe the role and responsibilities…" />
+                            {showError("description") && validationErrors.description && <p className="mt-1 text-xs text-red-600">{validationErrors.description}</p>}
+                        </div>
+
+                        {/* Requirements */}
+                        <div>
+                            <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">Requirements <span className="text-gray-400 normal-case font-normal">(optional)</span></label>
+                            <textarea rows={4} value={form.requirements} onChange={set("requirements")} onBlur={markTouched("requirements")} className={`${inp} resize-none`} placeholder="List any specific requirements, qualifications…" />
+                            {(showError("requirements") || form.requirements.trim().length > 0) && validationErrors.requirements && <p className="mt-1 text-xs text-red-600">{validationErrors.requirements}</p>}
+                        </div>
+
+                        <div className="flex gap-3 justify-end pt-4 border-t border-gray-100">
+                            <Link to="/org/job-listings" className="border border-gray-300 text-gray-600 px-6 py-3 rounded-xl text-sm font-semibold hover:bg-gray-50 transition-colors">Cancel</Link>
+                            <button type="submit" disabled={formLoading} className="bg-green-600 hover:bg-green-700 text-white px-8 py-3 rounded-xl text-sm font-bold disabled:opacity-60 transition-colors shadow-sm">
+                                {formLoading ? "Saving…" : jobId ? "Update Post" : "Post Job"}
+                            </button>
+                        </div>
+                    </form>
                 </div>
-
-                <div>
-                  <label className="block text-xs text-gray-400 mb-1">Max</label>
-                  <input
-                    type="number"
-                    min="0"
-                    value={form.salaryMax}
-                    onChange={set("salaryMax")}
-                    className={inp}
-                    placeholder="50000"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs text-gray-400 mb-1">Currency</label>
-                  <select value={form.salaryCurrency} onChange={set("salaryCurrency")} className={selCls}>
-                    {CURRENCIES.map((c) => (
-                      <option key={c} value={c}>
-                        {c}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-xs text-gray-400 mb-1">Per</label>
-                  <select value={form.salaryPeriod} onChange={set("salaryPeriod")} className={selCls}>
-                    {PERIODS.map((p) => (
-                      <option key={p} value={p}>
-                        {p}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
             </div>
-
-            {/* Application deadline + Skills */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">
-                  Application Deadline
-                </label>
-                <input
-                  type="date"
-                  value={form.deadline}
-                  onChange={set("deadline")}
-                  className={inp}
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">
-                  Skills (comma-separated)
-                </label>
-                <input
-                  value={form.skills}
-                  onChange={set("skills")}
-                  className={inp}
-                  placeholder="React, Node.js, MongoDB"
-                />
-              </div>
-            </div>
-
-            {/* Description */}
-            <div>
-              <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">
-                Job Description *
-              </label>
-              <textarea
-                required
-                rows={4}
-                value={form.description}
-                onChange={set("description")}
-                className={`${inp} resize-none`}
-                placeholder="Describe the role and responsibilities…"
-              />
-            </div>
-
-            {/* Requirements */}
-            <div>
-              <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">
-                Requirements <span className="text-gray-400 normal-case font-normal">(optional)</span>
-              </label>
-              <textarea
-                rows={3}
-                value={form.requirements}
-                onChange={set("requirements")}
-                className={`${inp} resize-none`}
-                placeholder="List any specific requirements, qualifications…"
-              />
-            </div>
-
-            <div className="flex gap-3 justify-end pt-2 border-t border-gray-100">
-              <button
-                type="button"
-                onClick={cancelForm}
-                className="border border-gray-300 text-gray-600 px-5 py-2.5 rounded-xl text-sm hover:bg-gray-50 transition-colors"
-              >
-                Cancel
-              </button>
-
-              <button
-                type="submit"
-                disabled={formLoading}
-                className="bg-green-600 hover:bg-green-700 text-white px-6 py-2.5 rounded-xl text-sm font-semibold disabled:opacity-60 transition-colors shadow-sm"
-              >
-                {formLoading ? "Saving…" : jobId ? "Update Post" : "Post Job"}
-              </button>
-            </div>
-          </form>
         </div>
-      </div>
-    </div>
-  );
+    );
 }

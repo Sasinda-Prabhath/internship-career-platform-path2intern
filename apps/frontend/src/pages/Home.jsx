@@ -21,9 +21,7 @@ const logoColor = (name) => LOGO_COLORS[(name?.charCodeAt(0) || 0) % LOGO_COLORS
 const hasDeadlinePassed = (deadline) => deadline && new Date(deadline).getTime() < Date.now();
 
 /* ── Job card ────────────────────────────────────────────────────────────── */
-function JobCard({ job, cvData }) {
-function JobCard({ job, index }) {
-function JobCard({ job, onViewApply, applyLabel = "View & Apply", applyDisabled = false }) {
+function JobCard({ job, cvData, index, onViewApply, applyLabel = "View & Apply", applyDisabled = false }) {
   const initials = (job.company || "?").split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase();
   
   let matchBadge = null;
@@ -88,17 +86,19 @@ function JobCard({ job, onViewApply, applyLabel = "View & Apply", applyDisabled 
       )}
       {job.salaryDisplay && <p className="text-xs text-emerald-700 font-semibold animate-pulse">💰 {job.salaryDisplay}</p>}
       {job.deadline && <p className="text-xs text-gray-400">Deadline: {new Date(job.deadline).toLocaleDateString()}</p>}
-      <button
-        type="button"
-        onClick={() => onViewApply?.(job)}
-        disabled={applyDisabled}
-        className={`mt-auto w-full text-center text-sm font-medium rounded-xl py-2 transition-colors border ${applyDisabled
-          ? "text-gray-400 border-gray-200 bg-gray-100 cursor-not-allowed"
-          : "text-blue-600 border-blue-200 hover:bg-blue-600 hover:text-white hover:border-blue-600 bg-blue-50"
-          }`}
-      >
-        {applyLabel}
-      </button>
+      {matchBadge}
+      {applyDisabled ? (
+          <button disabled className="mt-auto w-full text-center text-sm font-medium rounded-xl py-2 transition-colors border text-gray-400 border-gray-200 bg-gray-100 cursor-not-allowed">
+              Already Applied
+          </button>
+      ) : (
+          <Link
+            to={`/jobs/${job._id}`}
+            className="mt-auto w-full text-center text-sm font-medium rounded-xl py-2 transition-colors border text-blue-600 border-blue-200 hover:bg-blue-600 hover:text-white hover:border-blue-600 bg-blue-50"
+          >
+            {applyLabel}
+          </Link>
+      )}
     </div>
   );
 }
@@ -369,6 +369,19 @@ export default function Home() {
     return () => clearTimeout(t);
   }, [search, workMode, type]);
 
+  /* ── Applied jobs on mount ─────────────────────────────────────── */
+  useEffect(() => {
+      if (user && user.globalRole === "STUDENT") {
+          api.get("/api/jobs/applications/mine")
+             .then((res) => {
+                 const apps = res.data.applications || [];
+                 const ids = apps.map(app => app.job?._id || app.job).filter(Boolean);
+                 setAppliedJobIds(ids);
+             })
+             .catch(() => {});
+      }
+  }, [user]);
+
   /* ── Logged-in view ─────────────────────────────────────────────── */
   if (!authLoading && user) {
     const dashboardRoute = getDashboardRoute(user.globalRole, user.moduleScopedRoles);
@@ -430,7 +443,14 @@ export default function Home() {
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-              {jobs.map((job) => <JobCard key={job._id} job={job} cvData={cvData} />)}
+              {jobs.map((job) => (
+                  <JobCard 
+                      key={job._id} 
+                      job={job} 
+                      cvData={cvData} 
+                      applyDisabled={appliedJobIds.includes(job._id)}
+                  />
+              ))}
             </div>
           )}
         </main>

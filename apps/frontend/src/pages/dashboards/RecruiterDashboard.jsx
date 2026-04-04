@@ -203,11 +203,7 @@ export default function OrgDashboard() {
                                     </div>
                                 </div>
                                 <OrgActionCard
-                                    to="/org/review-applications?filter=shortlisted"
-                                    icon="👥"
-                                    title="Shortlish Candidtes"
-                                    description="See all student applications for your listings."
-                                    to="/org/job-listings"
+                                    to="/org/review-applications"
                                     icon="👥"
                                     title="Review Applications"
                                     description="Click a job listing then 'Applicants' to review submissions."

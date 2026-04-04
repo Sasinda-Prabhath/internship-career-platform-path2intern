@@ -32,6 +32,7 @@ import QuestionBankPage from "./pages/module/QuestionBankPage";
 import QuizPage from "./pages/quiz/QuizPage";
 import ResumePage from "./pages/ResumePage";
 import MyApplicationsPage from "./pages/student/MyApplicationsPage";
+import SimulationRunner from "./pages/SimulationRunner";
 
 // University Admin pages
 import StaffManagementPage from "./pages/staff/StaffManagementPage";

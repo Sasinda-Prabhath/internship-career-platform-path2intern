@@ -352,6 +352,11 @@ export const downloadApplicationCv = async (req, res) => {
         }
 
         res.download(absolutePath, application.cvOriginalName);
+    } catch (e) {
+        res.status(500).json({ message: e.message });
+    }
+};
+
 // GET /api/jobs/:id/applicants  — org only, their own job
 export const getJobApplicants = async (req, res) => {
     try {
@@ -437,6 +442,11 @@ export const downloadJobsPDF = async (req, res) => {
 
         // Finalize PDF
         doc.end();
+    } catch (e) {
+        res.status(500).json({ message: e.message });
+    }
+};
+
 // PATCH /api/jobs/:id/applicants/:appId  — org only
 export const updateApplicantStatus = async (req, res) => {
     try {

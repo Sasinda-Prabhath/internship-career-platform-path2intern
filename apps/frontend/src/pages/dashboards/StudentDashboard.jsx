@@ -45,6 +45,8 @@ const DarkActionCard = ({ to, icon, title, description, disabled }) => (
 export default function StudentDashboard() {
     const { user, updateUser } = useAuth();
     const [stats, setStats] = useState({ sent: 0, shortlisted: 0 });
+    const [jobs, setJobs] = useState([]);
+    const [jobsLoading, setJobsLoading] = useState(true);
 
     const handleDeleteCv = async () => {
         if (!window.confirm("Are you sure you want to delete your CV?")) return;
@@ -57,19 +59,29 @@ export default function StudentDashboard() {
     };
 
     useEffect(() => {
-        const fetchStats = async () => {
+        const fetchStatsAndJobs = async () => {
             try {
-                const res = await api.get("/api/applications/mine");
-                const apps = res.data.applications || [];
+                const [statsRes, jobsRes] = await Promise.all([
+                    api.get("/api/applications/mine").catch(() => ({ data: { applications: [] } })),
+                    api.get("/api/jobs").catch(() => ({ data: { jobs: [] } }))
+                ]);
+                
+                const apps = statsRes.data.applications || [];
                 setStats({
                     sent: apps.length,
                     shortlisted: apps.filter(a => a.status === "Shortlisted").length
                 });
+
+                const allJobs = jobsRes.data.jobs || [];
+                // Sort by date to get latest (assuming parsing createdAt) and limit to 3
+                setJobs(allJobs.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, 3));
             } catch (err) {
                 // Ignore API error
+            } finally {
+                setJobsLoading(false);
             }
         };
-        fetchStats();
+        fetchStatsAndJobs();
     }, []);
 
     return (
@@ -143,7 +155,7 @@ export default function StudentDashboard() {
                                         {job.workMode && <span className="bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full">{job.workMode}</span>}
                                     </div>
                                     {job.salaryDisplay && <p className="text-xs text-emerald-700 font-semibold mb-4">💰 {job.salaryDisplay}</p>}
-                                    <Link to={`/job/${job._id}`} className="w-full text-center text-sm font-medium text-blue-600 border border-blue-200 rounded-xl py-2 hover:bg-blue-600 hover:text-white hover:border-blue-600 transition-colors bg-blue-50 block">
+                                    <Link to={`/jobs/${job._id}`} className="w-full text-center text-sm font-medium text-blue-600 border border-blue-200 rounded-xl py-2 hover:bg-blue-600 hover:text-white hover:border-blue-600 transition-colors bg-blue-50 block">
                                         View & Apply
                                     </Link>
                                 </div>
