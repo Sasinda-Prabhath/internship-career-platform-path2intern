@@ -131,7 +131,13 @@ export const getPublicByUsername = async (req, res) => {
     const username = String(req.params.username || "").trim().toLowerCase();
     if (!username) return res.status(400).json({ message: "Username required" });
 
-    const portfolio = await Portfolio.findOne({ username, isPublished: true })
+    // In development, allow viewing any portfolio; in production, require isPublished
+    const query = { username };
+    if (process.env.NODE_ENV === 'production') {
+      query.isPublished = true;
+    }
+
+    const portfolio = await Portfolio.findOne(query)
       .populate("userId", "name email")
       .lean();
 
