@@ -36,18 +36,25 @@ const FilterStatCard = ({ label, value, sub, active, onClick }) => (
 export default function ReviewApplicationsPage() {
     const [searchParams, setSearchParams] = useSearchParams();
     const [applications, setApplications] = useState([]);
+    const [jobs, setJobs] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
     const [savingId, setSavingId] = useState("");
     const [activeFilter, setActiveFilter] = useState(searchParams.get("filter") || "all");
+    const [selectedJobId, setSelectedJobId] = useState("all");
 
     useEffect(() => {
-        const loadApplications = async () => {
+        const loadData = async () => {
             setLoading(true);
             setError("");
             try {
-                const response = await api.get("/api/jobs/applications/received");
-                setApplications(response.data.applications || []);
+                const [jobsRes, appsRes] = await Promise.all([
+                    api.get("/api/jobs/mine"),
+                    api.get("/api/jobs/applications/received"),
+                ]);
+
+                setJobs(jobsRes.data.jobs || []);
+                setApplications(appsRes.data.applications || []);
             } catch (err) {
                 setError(err.response?.data?.message || "Failed to load applications.");
             } finally {
@@ -55,7 +62,7 @@ export default function ReviewApplicationsPage() {
             }
         };
 
-        loadApplications();
+        loadData();
     }, []);
 
     useEffect(() => {
@@ -85,15 +92,20 @@ export default function ReviewApplicationsPage() {
         }
     };
 
-    const submitted   = applications.filter((a) => a.status === "submitted");
-    const shortlisted = applications.filter((a) => a.status === "shortlisted");
-    const rejected    = applications.filter((a) => a.status === "rejected");
+    const selectedJob = selectedJobId === "all" ? null : jobs.find((job) => job._id === selectedJobId);
+    const applicationsForSelectedJob = selectedJob
+        ? applications.filter((app) => app.job?._id === selectedJobId)
+        : applications;
+
+    const submitted   = applicationsForSelectedJob.filter((a) => a.status === "submitted");
+    const shortlisted = applicationsForSelectedJob.filter((a) => a.status === "shortlisted");
+    const rejected    = applicationsForSelectedJob.filter((a) => a.status === "rejected");
 
     const filtered =
         activeFilter === "shortlisted" ? shortlisted :
         activeFilter === "submitted"   ? submitted :
         activeFilter === "rejected"    ? rejected :
-        applications;
+        applicationsForSelectedJob;
 
     const isShortlistMode = activeFilter === "shortlisted";
 
@@ -112,18 +124,46 @@ export default function ReviewApplicationsPage() {
                     ) : (
                         <>
                             <h1 className="text-3xl font-bold text-gray-900 mt-2">Review Applications</h1>
-                            <p className="text-gray-500 mt-1 text-sm">Download student CVs and review everyone who applied to your internship listings.</p>
+                            <p className="text-gray-500 mt-1 text-sm">
+                                {selectedJob
+                                    ? `Review applications for ${selectedJob.title}.`
+                                    : "Download student CVs and review everyone who applied to your internship listings."}
+                            </p>
                         </>
                     )}
                 </div>
             </div>
 
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                    <FilterStatCard label="All Applications" value={loading ? "—" : applications.length} sub="Across all listings" active={activeFilter === "all"} onClick={() => handleFilterChange("all")} />
-                    <FilterStatCard label="Awaiting Review" value={loading ? "—" : submitted.length} sub="New submissions" active={activeFilter === "submitted"} onClick={() => handleFilterChange("submitted")} />
-                    <FilterStatCard label="Shortlisted" value={loading ? "—" : shortlisted.length} sub="Ready for follow-up" active={activeFilter === "shortlisted"} onClick={() => handleFilterChange("shortlisted")} />
-                    <FilterStatCard label="Rejected" value={loading ? "—" : rejected.length} sub="Not progressed" active={activeFilter === "rejected"} onClick={() => handleFilterChange("rejected")} />
+<div className="space-y-6">
+                        <div className="overflow-x-auto pb-2">
+                            <div className="inline-flex gap-2">
+                                <button
+                                    type="button"
+                                    onClick={() => setSelectedJobId("all")}
+                                    className={`rounded-2xl border px-4 py-2 text-sm font-semibold transition ${selectedJobId === "all" ? "bg-blue-600 text-white border-blue-600" : "bg-white text-gray-700 border-gray-200 hover:border-gray-300"}`}
+                                >
+                                    All Roles
+                                </button>
+                                {jobs.map((job) => (
+                                    <button
+                                        key={job._id}
+                                        type="button"
+                                        onClick={() => setSelectedJobId(job._id)}
+                                        className={`rounded-2xl border px-4 py-2 text-sm font-semibold transition ${selectedJobId === job._id ? "bg-blue-600 text-white border-blue-600" : "bg-white text-gray-700 border-gray-200 hover:border-gray-300"}`}
+                                    >
+                                        {job.title.length > 22 ? `${job.title.slice(0, 22)}…` : job.title}
+                                        <span className="ml-2 text-xs font-medium text-slate-500">({job.applicationCount ?? applications.filter((a) => a.job?._id === job._id).length})</span>
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                            <FilterStatCard label="All Applications" value={loading ? "—" : applicationsForSelectedJob.length} sub="Across selected role(s)" active={activeFilter === "all"} onClick={() => handleFilterChange("all")} />
+                            <FilterStatCard label="Awaiting Review" value={loading ? "—" : submitted.length} sub="New submissions" active={activeFilter === "submitted"} onClick={() => handleFilterChange("submitted")} />
+                            <FilterStatCard label="Shortlisted" value={loading ? "—" : shortlisted.length} sub="Ready for follow-up" active={activeFilter === "shortlisted"} onClick={() => handleFilterChange("shortlisted")} />
+                            <FilterStatCard label="Rejected" value={loading ? "—" : rejected.length} sub="Not progressed" active={activeFilter === "rejected"} onClick={() => handleFilterChange("rejected")} />
+                        </div>
                 </div>
 
                 {error && <div className="bg-red-50 border border-red-200 text-red-600 text-sm rounded-2xl px-4 py-3">{error}</div>}
