@@ -10,6 +10,8 @@ import Home from "./pages/Home";
 import JobDetails from "./pages/JobDetails";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
+import ForgotPasswordPage from "./pages/ForgotPasswordPage";
+import ResetPasswordPage from "./pages/ResetPasswordPage";
 import Profile from "./pages/Profile";
 import AcceptInvitePage from "./pages/AcceptInvitePage";
 import JobDetailPage from "./pages/JobDetailPage";
@@ -73,6 +75,8 @@ function App() {
           <Route path="/jobs/:id" element={<JobDetails />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
+          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
 
           {/* Staff invite acceptance — public, no sidebar */}
           <Route path="/accept-invite" element={<AcceptInvitePage />} />

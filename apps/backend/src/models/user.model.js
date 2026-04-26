@@ -50,6 +50,10 @@ const userSchema = new mongoose.Schema(
     emailVerificationCodeHash: { type: String, default: null },
     emailVerificationExpiresAt: { type: Date, default: null },
 
+    // ── Password Reset OTP ───────────────────────────────────────────────────
+    passwordResetCodeHash: { type: String, default: null },
+    passwordResetExpiresAt: { type: Date, default: null },
+
     // ── Staff Invite Token ───────────────────────────────────────────────────
     // Plain code is given to the admin, stored here as a bcrypt hash
     inviteToken: { type: String, default: null },

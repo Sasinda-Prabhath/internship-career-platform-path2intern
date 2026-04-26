@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { register, registerOrg, verify, resend, login, logout, me } from "../controllers/auth.controller.js";
+import { register, registerOrg, verify, resend, login, logout, me, forgotPasswordController, resetPasswordController } from "../controllers/auth.controller.js";
 
 const router = Router();
 
@@ -10,5 +10,7 @@ router.post("/resend", resend);             // resend OTP
 router.post("/login", login);               // login after verified
 router.post("/logout", logout);             // logout
 router.get("/me", me);                      // session restoration
+router.post("/forgot-password", forgotPasswordController);  // forgot password
+router.post("/reset-password", resetPasswordController);    // reset password with OTP
 
 export default router;

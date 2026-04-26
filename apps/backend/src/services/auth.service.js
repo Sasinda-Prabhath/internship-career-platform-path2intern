@@ -1,7 +1,7 @@
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { User } from "../models/user.model.js";
-import { sendVerificationEmail } from "./email.service.js";
+import { sendVerificationEmail, sendPasswordResetOTPEmail } from "./email.service.js";
 
 // ─── Domain validation ────────────────────────────────────────────────────────
 // Only students must use @my.sliit.lk.
@@ -184,6 +184,57 @@ export const registerOrganization = async ({ name, email, password, organization
     await User.findByIdAndDelete(user._id);
     throw new Error("Failed to send verification email. Please try again.");
   }
+
+  return { user };
+};
+
+// ─── Password Reset ───────────────────────────────────────────────────────────
+
+export const forgotPassword = async ({ email }) => {
+  const user = await User.findOne({ email: email.toLowerCase() });
+  if (!user) throw new Error("No account found with this email. Please create a profile first.");
+
+  const code = generate6DigitCode();
+  const passwordResetCodeHash = await bcrypt.hash(code, 10);
+  const passwordResetExpiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 min
+
+  user.passwordResetCodeHash = passwordResetCodeHash;
+  user.passwordResetExpiresAt = passwordResetExpiresAt;
+  await user.save();
+
+  try {
+    await sendPasswordResetOTPEmail(email, code);
+  } catch (emailError) {
+    console.error("Failed to send password reset email:", emailError.message);
+    user.passwordResetCodeHash = null;
+    user.passwordResetExpiresAt = null;
+    await user.save();
+    throw new Error("Failed to send password reset email. Please try again.");
+  }
+
+  return { user };
+};
+
+export const resetPassword = async ({ email, code, newPassword }) => {
+  const user = await User.findOne({ email: email.toLowerCase() });
+  if (!user) throw new Error("User not found");
+
+  if (!user.passwordResetCodeHash || !user.passwordResetExpiresAt) {
+    throw new Error("No password reset request found. Please request a new one.");
+  }
+  if (user.passwordResetExpiresAt.getTime() < Date.now()) {
+    throw new Error("Password reset code expired. Please request a new one.");
+  }
+
+  const ok = await bcrypt.compare(code, user.passwordResetCodeHash);
+  if (!ok) throw new Error("Invalid reset code");
+
+  validatePassword(newPassword);
+
+  user.passwordHash = await bcrypt.hash(newPassword, 10);
+  user.passwordResetCodeHash = null;
+  user.passwordResetExpiresAt = null;
+  await user.save();
 
   return { user };
 };

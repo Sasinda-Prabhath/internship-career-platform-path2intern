@@ -5,6 +5,8 @@ import {
   verifyEmail,
   resendVerificationCode,
   loginUser,
+  forgotPassword,
+  resetPassword,
 } from "../services/auth.service.js";
 import { User } from "../models/user.model.js";
 import { uploadOrgDoc } from "../middleware/upload.middleware.js";
@@ -170,5 +172,34 @@ export const me = async (req, res) => {
     });
   } catch {
     res.status(401).json({ message: "Invalid or expired session" });
+  }
+};
+
+export const forgotPasswordController = async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) {
+      return res.status(400).json({ message: "Email is required" });
+    }
+    await forgotPassword({ email });
+    res.json({ message: "Password reset code sent to your email. It will expire in 15 minutes." });
+  } catch (e) {
+    res.status(400).json({ message: e.message });
+  }
+};
+
+export const resetPasswordController = async (req, res) => {
+  try {
+    const { email, code, newPassword } = req.body;
+    if (!email || !code || !newPassword) {
+      return res.status(400).json({ message: "Email, reset code, and new password are required" });
+    }
+    const { user } = await resetPassword({ email, code, newPassword });
+    res.json({
+      message: "Password reset successfully",
+      user: { id: user._id, name: user.name, email: user.email, globalRole: user.globalRole },
+    });
+  } catch (e) {
+    res.status(400).json({ message: e.message });
   }
 };
