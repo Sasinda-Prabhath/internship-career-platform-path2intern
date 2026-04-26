@@ -120,28 +120,28 @@ export default function StaffManagementPage() {
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     {/* ── Invite form */}
                     <div className="bg-white border border-gray-200 rounded-2xl p-6 lg:col-span-1">
-                        <h2 className="text-base font-semibold text-white mb-5 flex items-center gap-2">
+                        <h2 className="text-base font-semibold text-gray-900 mb-5 flex items-center gap-2">
                             <span className="w-7 h-7 bg-amber-500/20 text-amber-400 rounded-lg flex items-center justify-center text-xs font-bold border border-amber-500/30">+</span>
                             Invite Staff
                         </h2>
                         <form onSubmit={handleInvite} className="space-y-4">
                             <div>
-                                <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wide mb-1.5">Full Name</label>
+                                <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wide mb-1.5">Full Name</label>
                                 <input type="text" className={inp} placeholder="Jane Smith" value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} required />
                             </div>
                             <div>
-                                <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wide mb-1.5">Email Address</label>
+                                <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wide mb-1.5">Email Address</label>
                                 <input type="email" className={inp} placeholder="jane@example.com" value={form.email} onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))} required />
-                                <p className="text-xs text-slate-600 mt-1">Any email (gmail, outlook, etc.)</p>
+                                <p className="text-xs text-gray-600 mt-1">Any email (gmail, outlook, etc.)</p>
                             </div>
                             <div>
-                                <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wide mb-1.5">Staff Role</label>
+                                <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wide mb-1.5">Staff Role</label>
                                 <select className={inp} value={form.staffRole} onChange={(e) => setForm((f) => ({ ...f, staffRole: e.target.value }))}>
                                     {ROLE_OPTIONS.map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}
                                 </select>
                             </div>
                             <div>
-                                <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wide mb-2">Module Scopes</label>
+                                <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wide mb-2">Module Scopes</label>
                                 <div className="flex flex-wrap gap-2">
                                     {MODULE_OPTIONS.map((m) => (
                                         <button key={m.code} type="button" onClick={() => toggleModule(m.code)}
@@ -165,26 +165,26 @@ export default function StaffManagementPage() {
 
                     {/* ── Staff table */}
                     <div className="bg-white border border-gray-200 rounded-2xl lg:col-span-2 overflow-hidden">
-                        <div className="px-5 py-4 border-b border-slate-800 flex items-center justify-between">
-                            <h2 className="text-base font-semibold text-white">All Staff</h2>
-                            <span className="text-xs bg-slate-800 text-slate-400 font-medium px-2.5 py-1 rounded-full border border-slate-700">{staff.length}</span>
+                        <div className="px-5 py-4 border-b border-gray-200 flex items-center justify-between">
+                            <h2 className="text-base font-semibold text-gray-900">All Staff</h2>
+                            <span className="text-xs bg-gray-100 text-gray-600 font-medium px-2.5 py-1 rounded-full border border-gray-300">{staff.length}</span>
                         </div>
                         {loading ? (
                             <div className="flex justify-center py-12"><div className="w-8 h-8 border-4 border-amber-400 border-t-transparent rounded-full animate-spin" /></div>
                         ) : staff.length === 0 ? (
-                            <div className="text-center py-16 text-slate-500 text-sm">No staff yet. Use the form to invite your first staff member.</div>
+                            <div className="text-center py-16 text-gray-500 text-sm">No staff yet. Use the form to invite your first staff member.</div>
                         ) : (
-                            <div className="divide-y divide-slate-800">
+                            <div className="divide-y divide-gray-200">
                                 {staff.map((s) => {
                                     const sc = STATUS_STYLES[s.status] || {};
                                     const busy = !!actionLoading[s._id];
                                     return (
-                                        <div key={s._id} className="px-5 py-4 hover:bg-slate-800/40 transition-colors">
+                                        <div key={s._id} className="px-5 py-4 hover:bg-gray-50 transition-colors">
                                             {editing?.id === s._id ? (
                                                 <div className="space-y-3">
                                                     <div className="flex items-center gap-3">
-                                                        <p className="font-semibold text-sm text-white">{s.name}</p>
-                                                        <p className="text-xs text-slate-400">{s.email}</p>
+                                                        <p className="font-semibold text-sm text-gray-900">{s.name}</p>
+                                                        <p className="text-xs text-gray-600">{s.email}</p>
                                                     </div>
                                                     <div className="flex flex-wrap gap-2 items-center">
                                                         <select className="border border-slate-700 rounded-lg px-2 py-1.5 text-xs bg-slate-800 text-white focus:ring-1 focus:ring-purple-400 focus:outline-none" value={editing.staffRole} onChange={(e) => setEditing((ed) => ({ ...ed, staffRole: e.target.value }))}>
@@ -207,11 +207,11 @@ export default function StaffManagementPage() {
                                                     <div className="w-9 h-9 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 text-white flex items-center justify-center text-sm font-bold flex-shrink-0">{s.name?.charAt(0)?.toUpperCase()}</div>
                                                     <div className="flex-1 min-w-0">
                                                         <div className="flex items-center gap-2 flex-wrap">
-                                                            <p className="text-sm font-semibold text-white truncate">{s.name}</p>
+                                                            <p className="text-sm font-semibold text-gray-900 truncate">{s.name}</p>
                                                             <span className={`text-xs font-medium px-2 py-0.5 rounded-full border ${sc.bg} ${sc.text} ${sc.border}`}>{sc.label}</span>
                                                             <span className="text-xs bg-purple-500/20 text-purple-400 border border-purple-500/20 font-medium px-2 py-0.5 rounded-full">{s.staffRole === "MODULE_MANAGER" ? "Manager" : "Operator"}</span>
                                                         </div>
-                                                        <p className="text-xs text-slate-500 mt-0.5">{s.email}</p>
+                                                        <p className="text-xs text-gray-600 mt-0.5">{s.email}</p>
                                                         <div className="flex flex-wrap gap-1 mt-1.5">{(s.moduleScopes || []).map((m) => <ModuleChip key={m} code={m} />)}</div>
                                                     </div>
                                                     <div className="flex gap-1 flex-shrink-0">

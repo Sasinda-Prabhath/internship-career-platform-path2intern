@@ -18,6 +18,12 @@ function Eye({ x = 0, y = 0 }) {
 
 function AnimatedPanel({ eyeDir }) {
   const { x, y } = eyeDir;
+  
+  // Calculate rotation and tilt based on mouse position
+  const rotation = x * 12; // lean left/right
+  const tilt = y * 8; // tilt up/down
+  const bodyShift = { x: x * 8, y: y * 6 }; // body follows cursor slightly
+  
   return (
     <div className="relative w-full h-full bg-[#f0f0f0] flex items-center justify-center overflow-hidden select-none">
       <div className="absolute w-64 h-64 rounded-full bg-blue-100/40 -top-16 -left-16" />
@@ -35,8 +41,11 @@ function AnimatedPanel({ eyeDir }) {
       <div className="relative w-72 h-72">
         {/* Purple tall blob (back) */}
         <div
-          className="absolute bottom-0 left-12 w-24 h-48 bg-[#6c47ff] rounded-2xl flex flex-col items-center justify-start pt-8 gap-2 shadow-xl"
-          style={{ transform: "rotate(-6deg)" }}
+          className="absolute bottom-0 left-12 w-24 h-48 bg-[#6c47ff] rounded-2xl flex flex-col items-center justify-start pt-8 gap-2 shadow-xl transition-transform duration-75"
+          style={{ 
+            transform: `rotate(${rotation * 0.5}deg) translateY(${bodyShift.y}px)`,
+            transformOrigin: "center bottom"
+          }}
         >
           <div className="flex gap-2">
             <Eye x={x} y={y} />
@@ -45,7 +54,13 @@ function AnimatedPanel({ eyeDir }) {
         </div>
 
         {/* Black medium blob */}
-        <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-20 h-36 bg-gray-900 rounded-2xl flex flex-col items-center justify-start pt-5 gap-2 shadow-xl">
+        <div 
+          className="absolute bottom-0 left-1/2 -translate-x-1/2 w-20 h-36 bg-gray-900 rounded-2xl flex flex-col items-center justify-start pt-5 gap-2 shadow-xl transition-transform duration-75"
+          style={{ 
+            transform: `translateX(-50%) rotateZ(${rotation * 0.3}deg) translateY(${bodyShift.y}px)`,
+            transformOrigin: "center bottom"
+          }}
+        >
           <div className="flex gap-2">
             <Eye x={x} y={y} />
             <Eye x={x} y={y} />
@@ -55,18 +70,30 @@ function AnimatedPanel({ eyeDir }) {
         </div>
 
         {/* Orange half-circle (left) */}
-        <div className="absolute bottom-0 left-0 w-24 h-14 bg-[#f97316] rounded-t-full flex items-start justify-center pt-2 shadow-xl">
+        <div 
+          className="absolute bottom-0 left-0 w-24 h-14 bg-[#f97316] rounded-t-full flex items-start justify-center pt-2 shadow-xl transition-transform duration-75"
+          style={{ 
+            transform: `rotate(${rotation * 0.4}deg) translateY(${bodyShift.y * 0.8}px)`,
+            transformOrigin: "center bottom"
+          }}
+        >
           <div className="flex gap-3">
-            <div className="w-2 h-2 bg-gray-800 rounded-full" />
-            <div className="w-2 h-2 bg-gray-800 rounded-full" />
+            <Eye x={x} y={y} />
+            <Eye x={x} y={y} />
           </div>
         </div>
 
         {/* Yellow round blob (right) */}
-        <div className="absolute bottom-0 right-0 w-20 h-28 bg-[#facc15] rounded-t-3xl flex flex-col items-center justify-start pt-4 gap-2 shadow-xl">
+        <div 
+          className="absolute bottom-0 right-0 w-20 h-28 bg-[#facc15] rounded-t-3xl flex flex-col items-center justify-start pt-4 gap-2 shadow-xl transition-transform duration-75"
+          style={{ 
+            transform: `rotate(${rotation * 0.4}deg) translateY(${bodyShift.y * 0.8}px)`,
+            transformOrigin: "center bottom"
+          }}
+        >
           <div className="flex gap-2">
-            <div className="w-2 h-2 bg-gray-800 rounded-full" />
-            <div className="w-2 h-2 bg-gray-800 rounded-full" />
+            <Eye x={x} y={y} />
+            <Eye x={x} y={y} />
           </div>
           {/* Straight mouth */}
           <div className="w-5 h-0.5 bg-gray-800 rounded mt-2" />
@@ -143,7 +170,7 @@ export default function Login() {
             <span className="text-white font-bold text-lg">Path2Intern</span>
           </div>
 
-          <h1 className="text-3xl font-bold text-gray-900 mb-1">Welcome back!</h1>
+          <h1 className="text-3xl font-bold text-white mb-1">Welcome back!</h1>
           <p className="text-slate-400 text-sm mb-8">Please enter your details to continue</p>
 
           {error && (

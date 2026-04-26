@@ -112,6 +112,8 @@ export const login = async (req, res) => {
         moduleScopes: user.moduleScopes || [],
         status: user.status,
         organizationName: user.organizationName || null,
+        cvFilename: user.cvFilename || null,
+        cvText: user.cvText || null,
         moduleScopedRoles,
       },
     });
@@ -161,6 +163,8 @@ export const me = async (req, res) => {
         moduleScopes: user.moduleScopes || [],
         status: user.status,
         organizationName: user.organizationName || null,
+        cvFilename: user.cvFilename || null,
+        cvText: user.cvText || null,
         moduleScopedRoles,
       },
     });

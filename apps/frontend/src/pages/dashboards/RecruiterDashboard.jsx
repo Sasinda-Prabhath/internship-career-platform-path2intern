@@ -18,8 +18,8 @@ const StatCard = ({ label, value, icon, accent, sub }) => (
 );
 
 /* ── Job row in recent listings ────────────────────────────────────────── */
-const JobRow = ({ job }) => {
-    const age = Date.now() - new Date(job.createdAt).getTime();
+const JobRow = ({ job, currentTime }) => {
+    const age = currentTime - new Date(job.createdAt).getTime();
     const canEdit = age < 10 * 60 * 1000;
     const WORK_COLORS = {
         Remote: "bg-green-100 text-green-700",
@@ -32,15 +32,21 @@ const JobRow = ({ job }) => {
                 {job.company?.[0]?.toUpperCase() || "J"}
             </div>
             <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-gray-900 truncate">{job.title}</p>
+                <Link to={`/org/applicants/${job._id}`} className="hover:underline">
+                    <p className="text-sm font-medium text-gray-900 truncate">{job.title}</p>
+                </Link>
                 <p className="text-xs text-gray-400">{job.location} · {job.type}</p>
             </div>
             <div className="flex items-center gap-2 flex-shrink-0">
+                <Link to={`/dashboard/recruiter/job/${job._id}/applications`} className="text-xs bg-purple-100 text-purple-700 hover:bg-purple-200 px-2.5 py-1 rounded-lg font-bold transition-colors">
+                    Applicants
+                </Link>
                 <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${WORK_COLORS[job.workMode] || "bg-gray-100 text-gray-600"}`}>
                     {job.workMode}
                 </span>
+                <Link to={`/org/applicants/${job._id}`} className="text-xs text-purple-600 hover:underline font-medium">Applicants</Link>
                 {canEdit && (
-                    <Link to="/org/post-job" className="text-xs text-blue-600 hover:underline font-medium">Edit</Link>
+                    <Link to={`/org/edit-job/${job._id}`} className="text-xs text-blue-600 hover:underline font-medium">Edit</Link>
                 )}
             </div>
         </div>
@@ -79,19 +85,33 @@ const OrgActionCard = ({ to, icon, title, description, accent = "blue", disabled
 export default function OrgDashboard() {
     const { user } = useAuth();
     const [jobs, setJobs] = useState([]);
+    const [applications, setApplications] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [appStats, setAppStats] = useState({ total: 0, shortlisted: 0 });
+    const currentTime = Date.now();
 
-    const fetchJobs = useCallback(async () => {
+    const fetchJobsAndStats = useCallback(async () => {
         try {
-            const res = await api.get("/api/jobs/mine");
-            setJobs(res.data.jobs || []);
+            const [jobsRes, appsRes] = await Promise.all([
+                api.get("/api/jobs/mine"),
+                api.get("/api/applications/org")
+            ]);
+            setJobs(jobsRes.data.jobs || []);
+            
+            const apps = appsRes.data.applications || [];
+            setAppStats({
+                total: apps.length,
+                shortlisted: apps.filter(a => a.status === "Shortlisted").length
+            });
         } catch { /* ignore */ }
         finally { setLoading(false); }
     }, []);
 
-    useEffect(() => { fetchJobs(); }, [fetchJobs]);
+    useEffect(() => { fetchJobsAndStats(); }, [fetchJobsAndStats]);
 
     const activeJobs = jobs.filter(j => j.status === "active");
+    const submittedApplications = applications.filter((application) => application.status === "submitted");
+    const shortlistedApplications = applications.filter((application) => application.status === "shortlisted");
 
     return (
         <div className="min-h-screen bg-gray-50">
@@ -135,17 +155,17 @@ export default function OrgDashboard() {
                     />
                     <StatCard
                         label="Applications"
-                        value="—"
+                        value={loading ? "—" : appStats.total}
                         icon="📝"
                         accent={{ bg: "bg-amber-50", text: "text-amber-600" }}
-                        sub="Coming soon"
+                        sub="Across all jobs"
                     />
                     <StatCard
                         label="Shortlisted"
-                        value="—"
+                        value={loading ? "—" : appStats.shortlisted}
                         icon="⭐"
                         accent={{ bg: "bg-purple-50", text: "text-purple-600" }}
-                        sub="Coming soon"
+                        sub="Promising candidates"
                     />
                 </div>
 
@@ -164,27 +184,44 @@ export default function OrgDashboard() {
                                     accent="green"
                                 />
                                 <OrgActionCard
-                                    to="/org/post-job"
+                                    to="/org/job-listings"
                                     icon="📋"
                                     title="Manage Listings"
-                                    description="View, edit (within 10 min), or delete your job posts."
+                                    description="View, edit (within 2 min), or delete your job posts."
                                     accent="blue"
                                 />
+                                <div className="bg-white border border-gray-200 rounded-2xl p-5 flex items-start gap-4 hover:border-purple-300 hover:-translate-y-0.5 hover:shadow-md cursor-pointer transition-all duration-200"
+                                    onClick={() => {
+                                        window.open(`${api.defaults.baseURL}/api/jobs/download-pdf`, '_blank');
+                                    }}>
+                                    <div className="w-10 h-10 rounded-xl bg-purple-50 text-purple-600 font-bold text-xs flex items-center justify-center flex-shrink-0">
+                                        📄
+                                    </div>
+                                    <div>
+                                        <p className="text-sm font-semibold text-gray-900 mb-0.5">Download PDF</p>
+                                        <p className="text-xs text-gray-500 leading-relaxed">Get a PDF document of all your posted jobs.</p>
+                                    </div>
+                                </div>
                                 <OrgActionCard
-                                    to="#"
+                                    to="/org/review-applications?filter=shortlisted"
                                     icon="👥"
-                                    title="Review Applications"
-                                    description="See all student applications for your listings."
+                                    title="Shortlisted candidates"
+                                    description="See applications you have marked as shortlisted."
                                     accent="amber"
-                                    disabled
                                 />
                                 <OrgActionCard
-                                    to="#"
+                                    to="/org/job-listings"
+                                    icon="📋"
+                                    title="Review applications"
+                                    description="Open a job listing, then use Applicants to review submissions."
+                                    accent="amber"
+                                />
+                                <OrgActionCard
+                                    to="/org/review-applications"
                                     icon="✅"
-                                    title="Shortlist Candidates"
+                                    title="Review Application"
                                     description="Mark promising applicants and update their status."
                                     accent="purple"
-                                    disabled
                                 />
                             </div>
                         </div>
@@ -199,13 +236,53 @@ export default function OrgDashboard() {
                                 <li>• You can edit a post within 10 minutes of publishing</li>
                             </ul>
                         </div>
+
+                        <div className="bg-white border border-gray-200 rounded-2xl p-5">
+                            <div className="flex items-center justify-between mb-4">
+                                <h3 className="text-sm font-semibold text-gray-900">Latest Applications</h3>
+                                <Link to="/org/review-applications" className="text-xs text-blue-600 hover:underline font-medium">Open review page</Link>
+                            </div>
+
+                            {!loading && applications.length === 0 && (
+                                <p className="text-sm text-gray-400">Applications from students will appear here once they start applying.</p>
+                            )}
+
+                            {loading && (
+                                <div className="space-y-3">
+                                    {[1, 2, 3].map((item) => (
+                                        <div key={item} className="animate-pulse border-b border-gray-100 pb-3 last:border-0 last:pb-0">
+                                            <div className="h-3 bg-gray-100 rounded w-1/3 mb-2" />
+                                            <div className="h-3 bg-gray-100 rounded w-2/3 mb-1.5" />
+                                            <div className="h-2 bg-gray-100 rounded w-1/2" />
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+
+                            {!loading && applications.length > 0 && (
+                                <div className="space-y-3">
+                                    {applications.slice(0, 4).map((application) => (
+                                        <div key={application._id} className="border-b border-gray-100 pb-3 last:border-0 last:pb-0">
+                                            <div className="flex items-center justify-between gap-3 mb-1">
+                                                <p className="text-sm font-semibold text-gray-900 truncate">{application.student?.name || "Student"}</p>
+                                                <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200">
+                                                    {application.status}
+                                                </span>
+                                            </div>
+                                            <p className="text-sm text-gray-600 truncate">{application.job?.title || "Job deleted"}</p>
+                                            <p className="text-xs text-gray-400 mt-1">Applied on {new Date(application.createdAt).toLocaleDateString()}</p>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
                     </div>
 
                     {/* Recent listings panel */}
                     <div className="bg-white border border-gray-200 rounded-2xl p-5">
                         <div className="flex items-center justify-between mb-4">
                             <h3 className="text-sm font-semibold text-gray-900">Your Listings</h3>
-                            <Link to="/org/post-job" className="text-xs text-blue-600 hover:underline font-medium">View all</Link>
+                            <Link to="/org/job-listings" className="text-xs text-blue-600 hover:underline font-medium">View all</Link>
                         </div>
 
                         {loading && (
@@ -235,7 +312,7 @@ export default function OrgDashboard() {
 
                         {!loading && jobs.length > 0 && (
                             <div>
-                                {jobs.slice(0, 5).map(job => <JobRow key={job._id} job={job} />)}
+                                {jobs.slice(0, 5).map(job => <JobRow key={job._id} job={job} currentTime={currentTime} />)}
                                 {jobs.length > 5 && (
                                     <Link to="/org/post-job" className="block text-center text-xs text-blue-600 hover:underline mt-3 font-medium">
                                         +{jobs.length - 5} more listings →

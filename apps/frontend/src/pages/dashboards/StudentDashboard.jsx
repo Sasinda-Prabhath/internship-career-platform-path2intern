@@ -1,5 +1,7 @@
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
+import { api } from "../../services/api";
 
 const StatCard = ({ label, value, icon, accent }) => (
     <div className="bg-white border border-gray-200 rounded-2xl p-5 hover:border-gray-300 transition-colors">
@@ -41,7 +43,51 @@ const DarkActionCard = ({ to, icon, title, description, disabled }) => (
 );
 
 export default function StudentDashboard() {
-    const { user } = useAuth();
+    const { user, updateUser } = useAuth();
+    const [stats, setStats] = useState({ sent: 0, shortlisted: 0 });
+    const [jobs, setJobs] = useState([]);
+    const [jobsLoading, setJobsLoading] = useState(true);
+
+    const handleDeleteCv = async () => {
+        if (!window.confirm("Are you sure you want to delete your CV?")) return;
+        try {
+            await api.delete("/api/applications/cv");
+            updateUser({ cvFilename: null, cvText: null });
+        } catch (err) {
+            alert("Failed to delete CV");
+        }
+    };
+
+    useEffect(() => {
+        const fetchStats = async () => {
+            try {
+                const res = await api.get("/api/applications/mine");
+                const apps = res.data.applications || [];
+                setStats({
+                    sent: apps.length,
+                    shortlisted: apps.filter(a => a.status === "Shortlisted").length
+                });
+            } catch (err) {
+                // Ignore API error
+            }
+        };
+        fetchStats();
+    }, []);
+
+    useEffect(() => {
+        const fetchLatestJobs = async () => {
+            setJobsLoading(true);
+            try {
+                const res = await api.get("/api/jobs");
+                setJobs(res.data.jobs || []);
+            } catch (err) {
+                setJobs([]);
+            } finally {
+                setJobsLoading(false);
+            }
+        };
+        fetchLatestJobs();
+    }, []);
 
     return (
         <div className="min-h-screen bg-gray-50">
@@ -63,10 +109,64 @@ export default function StudentDashboard() {
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
                 {/* Stats */}
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
-                    <StatCard label="Applications Sent" value="0" icon="📨" accent="text-blue-400" />
-                    <StatCard label="Shortlisted" value="0" icon="⭐" accent="text-indigo-400" />
+                    <StatCard label="Applications Sent" value={stats.sent} icon="📨" accent="text-blue-400" />
+                    <StatCard label="Shortlisted" value={stats.shortlisted} icon="⭐" accent="text-indigo-400" />
                     <StatCard label="Quizzes Done" value="0" icon="🧠" accent="text-violet-400" />
                     <StatCard label="Modules Progress" value="0%" icon="📈" accent="text-purple-400" />
+                </div>
+
+                {/* Latest Internships */}
+                <div className="mb-10">
+                    <div className="flex items-center justify-between mb-6">
+                        <h2 className="text-lg font-semibold text-gray-900">Latest Internship Opportunities</h2>
+                        <Link to="/" className="text-sm text-blue-600 hover:underline font-medium">View all →</Link>
+                    </div>
+
+                    {jobsLoading ? (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                            {[...Array(6)].map((_, i) => (
+                                <div key={i} className="bg-white border border-gray-200 rounded-2xl p-5 animate-pulse">
+                                    <div className="flex gap-3 mb-3">
+                                        <div className="w-10 h-10 rounded-xl bg-gray-100 flex-shrink-0" />
+                                        <div className="flex-1 space-y-2">
+                                            <div className="h-3 bg-gray-100 rounded w-3/4" />
+                                            <div className="h-3 bg-gray-100 rounded w-1/2" />
+                                        </div>
+                                    </div>
+                                    <div className="h-8 bg-gray-100 rounded" />
+                                </div>
+                            ))}
+                        </div>
+                    ) : jobs.length === 0 ? (
+                        <div className="text-center py-12 bg-white border border-gray-200 rounded-2xl">
+                            <p className="text-4xl mb-3">📭</p>
+                            <p className="text-sm text-gray-500">No internships available right now. Check back soon!</p>
+                        </div>
+                    ) : (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                            {jobs.map((job) => (
+                                <div key={job._id} className="bg-white border border-gray-200 rounded-2xl p-5 hover:border-blue-300 hover:shadow-md transition-all duration-200 hover:-translate-y-0.5">
+                                    <div className="flex items-start gap-3 mb-3">
+                                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-lg font-bold flex-shrink-0 ${job.company ? "bg-blue-100 text-blue-700" : "bg-gray-100 text-gray-600"}`}>
+                                            {job.company?.[0]?.toUpperCase() || "J"}
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <h3 className="text-sm font-semibold text-gray-900 truncate">{job.title}</h3>
+                                            <p className="text-sm text-gray-500">{job.company}</p>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-2 flex-wrap text-xs mb-4">
+                                        <span className="text-gray-500">📍 {job.location}</span>
+                                        {job.workMode && <span className="bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full">{job.workMode}</span>}
+                                    </div>
+                                    {job.salaryDisplay && <p className="text-xs text-emerald-700 font-semibold mb-4">💰 {job.salaryDisplay}</p>}
+                                    <Link to={`/job/${job._id}`} className="w-full text-center text-sm font-medium text-blue-600 border border-blue-200 rounded-xl py-2 hover:bg-blue-600 hover:text-white hover:border-blue-600 transition-colors bg-blue-50 block">
+                                        View & Apply
+                                    </Link>
+                                </div>
+                            ))}
+                        </div>
+                    )}
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -77,9 +177,56 @@ export default function StudentDashboard() {
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <DarkActionCard to="/" icon="🔍" title="Browse Internships" description="Explore the latest internship opportunities from verified companies." />
                                 <DarkActionCard to="/quiz" icon="🧠" title="Take a Quiz" description="Test your knowledge across your module areas." />
-                                <DarkActionCard to="#" icon="📝" title="My Applications" description="Track all internship applications you've submitted." disabled />
-                                <DarkActionCard to="#" icon="👤" title="Update Profile" description="Keep your profile and resume up to date for recruiters." disabled />
+                                <DarkActionCard to="/dashboard/student/applications" icon="📝" title="My Applications" description="Track all internship applications you've submitted to see their statuses." />
+                                <DarkActionCard to="/dashboard/student/cv-upload" icon="📄" title="Manage CV" description="Upload or replace your CV to get updated intelligent match rates for every job." />
                             </div>
+                        </div>
+
+                        <div>
+                            <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-widest mb-5">My Resume / CV</h2>
+                            <div className="bg-white border border-gray-200 rounded-2xl p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                                {user?.cvFilename ? (
+                                    <>
+                                        <div className="flex items-center gap-3">
+                                            <div className="text-3xl">📄</div>
+                                            <div>
+                                                <p className="font-semibold text-gray-900">{user.cvFilename}</p>
+                                                <p className="text-xs text-gray-500">Active for matching</p>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <Link to="/dashboard/student/cv-upload" className="text-sm px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 text-gray-700 font-medium transition-colors">Replace</Link>
+                                            <button onClick={handleDeleteCv} className="text-sm px-4 py-2 border border-red-200 rounded-lg hover:bg-red-50 text-red-600 font-medium transition-colors">Delete</button>
+                                        </div>
+                                    </>
+                                ) : (
+                                    <>
+                                        <div className="flex items-center gap-3 opacity-60">
+                                            <div className="text-3xl">📤</div>
+                                            <div>
+                                                <p className="font-semibold text-gray-900">No CV Uploaded</p>
+                                                <p className="text-xs text-gray-500">Upload one to see match rates</p>
+                                            </div>
+                                        </div>
+                                        <Link to="/dashboard/student/cv-upload" className="text-sm px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition-colors text-center">Upload CV</Link>
+                                    </>
+                                )}
+                            </div>
+                        </div>
+
+                        <div className="bg-white border border-gray-200 rounded-2xl p-5">
+                            <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-widest mb-3">Resume Builder</h2>
+                            <p className="text-xs text-gray-500 mb-4">
+                                Create or update your resume in a dedicated builder tab.
+                            </p>
+                            <a
+                                href="/resume-builder"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center text-sm font-semibold text-blue-500 hover:text-blue-600 transition-colors"
+                            >
+                                Open Resume Builder ↗
+                            </a>
                         </div>
                     </div>
 

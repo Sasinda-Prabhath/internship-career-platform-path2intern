@@ -1,6 +1,7 @@
 import crypto from "crypto";
 import bcrypt from "bcryptjs";
 import { User } from "../models/user.model.js";
+import { sendInviteEmail } from "../services/email.service.js";
 
 const INVITE_EXPIRY_DAYS = 7;
 const VALID_MODULES = ["DS", "SE", "QA", "BA", "PM"];
@@ -57,6 +58,14 @@ export const inviteStaff = async (req, res) => {
             invitedBy: req.user.userId,
             isEmailVerified: false, // will be marked true on accept
         });
+
+        // Send invite email
+        try {
+            await sendInviteEmail(normalizedEmail, name, plainCode);
+        } catch (emailError) {
+            console.error("Failed to send invite email:", emailError);
+            // Don't fail the invite if email fails
+        }
 
         res.status(201).json({
             message: `Invite created for ${name}`,
