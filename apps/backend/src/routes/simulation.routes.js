@@ -7,18 +7,20 @@ const router = express.Router();
 // All routes require authentication
 router.use(requireAuth);
 
-// Start simulation - STUDENTS only
+// Start simulation - STUDENTS, MODULE_MANAGERS, and MODULE_OPERATORS can access
 router.post('/start', (req, res, next) => {
-  if (req.user.globalRole !== 'STUDENT') {
-    return res.status(403).json({ message: 'Only students can start simulations' });
+  const allowedRoles = ['STUDENT', 'STAFF'];
+  if (!allowedRoles.includes(req.user.globalRole)) {
+    return res.status(403).json({ message: 'Only students and staff can start simulations' });
   }
   next();
 }, startSimulation);
 
-// Submit simulation - STUDENTS only
+// Submit simulation - STUDENTS, MODULE_MANAGERS, and MODULE_OPERATORS can access
 router.post('/:attemptId/submit', (req, res, next) => {
-  if (req.user.globalRole !== 'STUDENT') {
-    return res.status(403).json({ message: 'Only students can submit simulations' });
+  const allowedRoles = ['STUDENT', 'STAFF'];
+  if (!allowedRoles.includes(req.user.globalRole)) {
+    return res.status(403).json({ message: 'Only students and staff can submit simulations' });
   }
   next();
 }, submitSimulation);

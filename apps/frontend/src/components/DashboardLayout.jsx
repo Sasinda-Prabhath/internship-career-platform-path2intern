@@ -64,6 +64,7 @@ const NAV = {
             { label: "My Applications", to: "/student/my-applications", icon: "users" },
             { label: "Browse Internships", to: "/", icon: "search" },
             { label: "Take a Quiz", to: "/quiz", icon: "quiz" },
+            { label: "Interview Simulation", to: "/simulation", icon: "target" },
             { label: "Build your resume", to: "/resume-builder", icon: "book" },
             { label: "Build your portfolio", to: "/dashboard/portfolio", icon: "book" },
         ],
@@ -79,6 +80,7 @@ const NAV = {
             { label: "Submit Question", to: "/module/submit-question", icon: "plus" },
             { label: "Question Bank", to: "/module/question-bank", icon: "book" },
             { label: "Manage Operators", to: "/module/assign-operator", icon: "users" },
+            { label: "Interview Simulation", to: "/simulation", icon: "target" },
         ],
     },
     MODULE_OPERATOR: {
@@ -90,6 +92,7 @@ const NAV = {
             { label: "Overview", to: "/dashboard/module-operator", icon: "grid" },
             { label: "Submit Question", to: "/module/submit-question", icon: "plus" },
             { label: "Question Bank", to: "/module/question-bank", icon: "book" },
+            { label: "Interview Simulation", to: "/simulation", icon: "target" },
         ],
     },
 };
