@@ -246,6 +246,54 @@ Authorization: Bearer YOUR_JWT_TOKEN_HERE
 
 ---
 
+### Submit MCQ Question (Module Manager)
+**Method:** `POST`  
+**URL:** `http://localhost:5000/api/module/questions`
+
+**Headers:**
+```
+Content-Type: application/json
+Authorization: Bearer YOUR_JWT_TOKEN_HERE
+```
+
+**Body (Raw JSON):**
+```json
+{
+  "module": "SE",
+  "questionText": "What is the primary goal of the Agile methodology?",
+  "options": [
+    { "label": "A", "text": "To deliver working software incrementally and respond to change" },
+    { "label": "B", "text": "To complete the entire project before testing" },
+    { "label": "C", "text": "To minimize team collaboration" },
+    { "label": "D", "text": "To reduce software quality for faster delivery" }
+  ],
+  "correctOption": "A",
+  "explanation": "Agile methodology prioritizes incremental delivery of working software and flexibility to respond to changing requirements."
+}
+```
+
+**Expected Response (201):**
+```json
+{
+  "message": "Question published immediately (manager submission).",
+  "question": {
+    "id": "question_id_here",
+    "module": "SE",
+    "questionText": "What is the primary goal of the Agile methodology?",
+    "status": "approved",
+    "submitterRole": "MODULE_MANAGER"
+  }
+}
+```
+
+**Notes:**
+- ✅ Module Manager questions are **published immediately** (status: `approved`)
+- ✅ No waiting for review needed
+- ✅ Same endpoint as Module Operator (`/api/module/questions`)
+- ✅ Same body format with 4 options (A, B, C, D)
+
+---
+
 ## 4️⃣ INTERVIEW SIMULATION ENDPOINTS
 
 ### Start Simulation (MCQ Quiz)

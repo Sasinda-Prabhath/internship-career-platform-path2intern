@@ -130,6 +130,7 @@ export const logout = async (req, res) => {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
+      maxAge: 0, // Immediately expire the cookie
     });
     res.json({ message: "Logged out successfully" });
   } catch (e) {
